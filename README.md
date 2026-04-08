@@ -10,6 +10,7 @@ Delfos is a high school project focused in real life event predictions. It uses 
 
 ### Featrures
 
+
 ## Architecture
 
 ## Structure
@@ -34,3 +35,21 @@ cd Delfos
 ## Usage
 
 ## Team
+The contribuitors are structured in multidisciplinar topic based teams. Each team focuses in a certain topic such us Geopolitics, but each component has a different role within the project.
+The teams are the following:
+### Team 1: 
+* NAME - roles: Data ingest, data reporting
+* NAME - roles: Data analysis
+* NAME - roles: DB design,
+
+
+##  Git Workflow & Contributing
+Since multiple groups are working on this repository, we follow a strict **GitFlow** branching model to prevent conflicts:
+
+1. **Never commit directly to `main` or `develop`.**
+2. Create a new branch for your task from `develop`:
+   `git checkout -b feature/[task-description]`
+   *(Example: `feature/api-ingestion`)*
+3. Commit your changes with descriptive messages.
+4. Push your branch and open a **Pull Request (PR)** targeting the `develop` branch.
+5. At least one member from another group (or the instructor) must review and approve the PR before merging.
