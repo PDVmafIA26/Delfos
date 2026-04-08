@@ -1,11 +1,6 @@
 # Delfos
 Delfos is a high school project focused in real life event predictions. It uses inside trading analysis over polymarket to create its predictions.
-![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)
-![Docker](https://img.shields.io/badge/Docker-Enabled-blue.svg)
-![Apache Kafka](https://img.shields.io/badge/Apache_Kafka-Message_Broker-black)
-![Apache Spark](https://img.shields.io/badge/Apache_Spark-Processing-orange)
-![Apache Airflow](https://img.shields.io/badge/Apache_Airflow-Orchestration-cyan)
-
+[![My Skills](https://skillicons.dev/icons?i=python,docker,kafka,spark,airflow)](https://skillicons.dev)
 ## Overview
 
 ### Featrures
