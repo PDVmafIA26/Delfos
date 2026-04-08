@@ -13,7 +13,7 @@ Delfos is a high school project focused in real life event predictions. It uses 
 ## Architecture
 
 ## Structure
-
+```
 ├── infrastructure/       # Docker Compose files, database init scripts
 ├── orchestration/        # Airflow DAGs
 ├── processing/           # PySpark scripts and ML anomaly models
@@ -21,7 +21,7 @@ Delfos is a high school project focused in real life event predictions. It uses 
 ├── notifications/        # Telegram Bot integration
 ├── requirements.txt      # Global Python dependencies
 └── README.md             # Project documentation
-
+```
 ## Prerequisites 
 To run this project locally, you must have the following installed on your machine:
 * 
