@@ -1,0 +1,4 @@
+- [ ] Dockerize (volume for assets), then delete dotenv dependency and the try/except in config.py.
+- [ ] (**Depends on REPORTING GUILD**) Ensure formatting has the required fields for each topic in templates.py/TEMPLATES.
+- [ ] Add logging.
+- [ ] Add testing.
