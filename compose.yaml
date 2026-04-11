@@ -1,0 +1,142 @@
+version: "3.9"  # Docker Compose version
+
+services:
+
+  # zookeper (Kafka depends on him)
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181  # Zookeeper internal port
+
+  # Kafka
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    depends_on:
+      - zookeeper  # Kafka needs Zookeeper
+    ports:
+      - "9092:9092"  # Port for external connections
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      # Internal address within Docker
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      # Replication factor (1 because it is a local environment)
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+  # Spark master
+  spark-master:
+    image: bitnami/spark:3.5
+    environment:
+      - SPARK_MODE=master  # This node is the master
+    ports:
+      - "8080:8080"  # UI of Spark
+
+  # Spark worker
+  spark-worker:
+    image: bitnami/spark:3.5
+    depends_on:
+      - spark-master
+    environment:
+      - SPARK_MODE=worker  # Worker node
+      - SPARK_MASTER_URL=spark://spark-master:7077  # Master connection
+
+  # minium (S3 type Data Lake)
+  minio:
+    image: minio/minio
+    # Start the server and the web console
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"  # API S3
+      - "9001:9001"  # Web interface
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio_data:/data  # Data persistence
+
+  # postgres
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data  # Persistence
+
+  # Postgres for airflow
+  postgres-airflow:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: ${POSTGRES_AIRFLOW_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_AIRFLOW_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_AIRFLOW_DB}
+    volumes:
+      - postgres_airflow_data:/var/lib/postgresql/data
+
+  # Airflow webserver (UI)
+  airflow-webserver:
+    image: apache/airflow:2.8.1
+    depends_on:
+      - postgres-airflow
+    environment:
+      # Runs tasks locally (not in a cluster)
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      # Airflow Database Connection
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASSWORD}@postgres-airflow/${AIRFLOW_DB_NAME}
+    ports:
+      - "8081:8080"  # UI accessible at localhost:8081
+    volumes:
+      - ./orquestacion:/opt/airflow/dags  # DAGs Folder
+
+  # airflow scheduler
+  airflow-scheduler:
+    image: apache/airflow:2.8.1
+    depends_on:
+      - airflow-webserver
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres-airflow/airflow
+    volumes:
+      - ./orquestacion:/opt/airflow/dags
+
+  polymarket-producers:
+    build: .
+    depends_on:
+      - kafka
+    environment:
+      KAFKA_BROKER: kafka:9092  # Broker's address
+
+# Reporting service
+
+# (writes to the shared volume)
+  reporting-service:
+    build:
+      context: ./infraestructure
+      dockerfile: Dockerfile.reporting
+    volumes:
+      - ./shared_reports:/shared  # Save charts/reports here
+
+  # Telegram Bot
+
+  # (reads from the shared volume)
+  messaging-bot:
+    build:
+      context: ./notifications
+      dockerfile: Dockerfile.notifications
+    depends_on:
+      - reporting-service
+    volumes:
+      # read only
+      - ./shared_reports:/shared:ro # ro is read-only
+
+# volumes (data persistence)
+volumes:
+  minio_data: # Data lake data
+  postgres_data: # Main database data
+  postgres_airflow_data: # Airflow Data
+
+  # shared volume between services
+  shared_reports:
