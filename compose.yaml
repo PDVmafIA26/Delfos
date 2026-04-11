@@ -30,6 +30,9 @@ services:
       - SPARK_MODE=master  # This node is the master
     ports:
       - "8080:8080"  # UI of Spark
+      - "7077:7077" # Port of master node
+    volumes:
+    - ./processing:/opt/spark/jobs
 
   # Spark worker
   spark-worker:
@@ -39,6 +42,8 @@ services:
     environment:
       - SPARK_MODE=worker  # Worker node
       - SPARK_MASTER_URL=spark://spark-master:7077  # Master connection
+    volumes:
+    - ./processing:/opt/spark/jobs
 
   # minium (S3 type Data Lake)
   minio:
@@ -98,7 +103,7 @@ services:
       - airflow-webserver
     environment:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres-airflow/airflow
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASSWORD}@postgres-airflow/${AIRFLOW_DB_NAME}
     volumes:
       - ./orquestacion:/opt/airflow/dags
 
