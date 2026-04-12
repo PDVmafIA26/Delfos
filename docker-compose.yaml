@@ -1,0 +1,45 @@
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+  init-kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: init-kafka
+    depends_on:
+      - kafka
+    entrypoint: [ '/bin/sh', '-c' ]
+    command: |
+      "
+      # Wait for the Kafka broker to be available before creating topics
+      echo 'Waiting for Kafka broker to be available...'
+      until kafka-topics --bootstrap-server kafka:9092 --list > /dev/null 2>&1; do
+        echo 'Kafka is not responding yet... retrying in 2 seconds'
+        sleep 2
+      done
+
+      # Create the required topic if it does not already exist
+      echo 'Kafka is online. Creating topic: tech_markets...'
+      kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic tech_markets --partitions 1 --replication-factor 1
+      
+      echo 'Topic creation successful. Current topic list:'
+      kafka-topics --bootstrap-server kafka:9092 --list
+      "

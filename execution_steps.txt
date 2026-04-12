@@ -1,0 +1,15 @@
+Execution steps
+
+CMD 1:
+
+docker-compose up -d
+
+python consumer.py
+
+CMD 2:
+
+python producer.py
+
+python check_db.py
+
+python queries.py
