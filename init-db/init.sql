@@ -4,7 +4,8 @@ CREATE TABLE IF NOT EXISTS anomalies (
     window_end TIMESTAMP,
     avg_volume DOUBLE PRECISION,
     max_volume DOUBLE PRECISION,
-    is_anomaly BOOLEAN
+    is_anomaly BOOLEAN,
+    PRIMARY KEY (market_id, window_start)
 );
 
 CREATE TABLE IF NOT EXISTS market_stats (
