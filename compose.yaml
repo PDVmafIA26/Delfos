@@ -5,12 +5,15 @@ services:
   # zookeper (Kafka depends on him)
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
     environment:
-      ZOOKEEPER_CLIENT_PORT: 2181  # Zookeeper internal port
+      ZOOKEEPER_CLIENT_PORT: 2181 # Zookeeper internal port
+      ZOOKEEPER_TICK_TIME: 2000
 
   # Kafka
   kafka:
     image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
     depends_on:
       - zookeeper  # Kafka needs Zookeeper
     ports:
@@ -19,9 +22,33 @@ services:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       # Internal address within Docker
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       # Replication factor (1 because it is a local environment)
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+  
+  init-kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: init-kafka
+    depends_on:
+      - kafka
+    entrypoint: [ '/bin/sh', '-c' ]
+    command: |
+      "
+      # Wait for the Kafka broker to be available before creating topics
+      echo 'Waiting for Kafka broker to be available...'
+      until kafka-topics --bootstrap-server kafka:9092 --list > /dev/null 2>&1; do
+        echo 'Kafka is not responding yet... retrying in 2 seconds'
+        sleep 2
+      done
+
+      # Create the required topic if it does not already exist
+      echo 'Kafka is online. Creating topic: tech_markets...'
+      kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic tech_markets --partitions 1 --replication-factor 1
+      
+      echo 'Topic creation successful. Current topic list:'
+      kafka-topics --bootstrap-server kafka:9092 --list
+      "
 
   # Spark master
   spark-master:
