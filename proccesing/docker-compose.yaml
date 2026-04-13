@@ -1,0 +1,124 @@
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+  init-kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: init-kafka
+    depends_on:
+      - kafka
+    entrypoint: [ '/bin/sh', '-c' ]
+    command: |
+      "
+      # Wait for the Kafka broker to be available before creating topics
+      echo 'Waiting for Kafka broker to be available...'
+      until kafka-topics --bootstrap-server kafka:9092 --list > /dev/null 2>&1; do
+        echo 'Kafka is not responding yet... retrying in 2 seconds'
+        sleep 2
+      done
+
+      # Create the required topic if it does not already exist
+      echo 'Kafka is online. Creating topic: tech_markets...'
+      kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic tech_markets --partitions 1 --replication-factor 1
+      
+      echo 'Topic creation successful. Current topic list:'
+      kafka-topics --bootstrap-server kafka:9092 --list
+      "
+  # Este es el servicio de almacenamiento (MinIO)
+  minio:
+    image: minio/minio:latest
+    container_name: minio_server
+    ports:
+      - "9000:9000"    # Puerto para que los scripts manden datos
+      - "9001:9001"    # Puerto para que se entre a ver los archivos (Consola)
+    environment:
+      MINIO_ROOT_USER: admin           
+      MINIO_ROOT_PASSWORD: administrador
+    volumes:
+      - ./datos_minio:/data           # Esto guarda los datos en una carpeta real del pc
+    command: server /data --console-address ":9001"
+  
+  spark-master:
+    image: apache/spark:3.5.1
+    container_name: spark-master
+    command: >
+      /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
+    ports:
+      - "7077:7077"
+      - "8080:8080"
+
+  spark-worker:
+    image: apache/spark:3.5.1
+    container_name: spark-worker
+    depends_on:
+      - spark-master
+    command: >
+      /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+
+  spark-streaming:
+    image: apache/spark:3.5.1
+    container_name: spark-streaming
+    depends_on:
+      - kafka
+      - spark-master
+    volumes:
+      - ./spark:/app
+    environment:
+      - HOME=/tmp
+    command: >
+      /opt/spark/bin/spark-submit
+      --conf spark.jars.ivy=/tmp/.ivy2
+      --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1,org.postgresql:postgresql:42.7.3
+      --master spark://spark-master:7077
+      /app/spark-streaming.py
+
+  spark-batch:
+    image: apache/spark:3.5.1
+    container_name: spark-batch
+    depends_on:
+      - spark-master
+      - postgres
+      - minio
+    volumes:
+      - ./spark:/app
+    environment:
+      - HOME=/tmp
+    command: >
+      /opt/spark/bin/spark-submit
+      --conf spark.jars.ivy=/tmp/.ivy2
+      --packages org.apache.hadoop:hadoop-aws:3.3.4,com.amazonaws:aws-java-sdk-bundle:1.12.262,org.postgresql:postgresql:42.7.3
+      --master spark://spark-master:7077
+      /app/spark-batch.py
+  
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    environment:
+      POSTGRES_DB: markets
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+    - ./init-db:/docker-entrypoint-initdb.d
