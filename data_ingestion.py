@@ -128,7 +128,9 @@ def run_advanced_ingestion(category_tag, keywords):
         
         # 3. Fetch Order Book via CLOB API
         order_book = get_order_book(yes_token_id) if yes_token_id else {"bids": [], "asks": []}
-        
+        wallets_by_price = get_top_wallets_by_price_synthesis(
+            deep_data.get("conditionId", "")
+        )
         # 4. Construct the Golden Payload for downstream processing
         golden_record = {
             "ingestion_timestamp": datetime.now(timezone.utc).isoformat(),
@@ -145,6 +147,11 @@ def run_advanced_ingestion(category_tag, keywords):
             "order_book": {                                
                 "bids": order_book.get("bids", [])[:10],   # Keep only the top 10 buy walls to reduce payload size
                 "asks": order_book.get("asks", [])[:10]    # Keep only the top 10 sell walls to reduce payload size
+            },
+            "wallets_per_bid_price": {
+                price: data
+                for price, data in wallets_by_price.items()
+                if float(price) < 0.5   # solo bids
             }
         }
         
@@ -154,6 +161,63 @@ def run_advanced_ingestion(category_tag, keywords):
         time.sleep(0.2) 
 
     return enriched_payloads
+
+def get_top_wallets_by_price_synthesis(condition_id, limit=500):
+    """
+    Usa Synthesis API (pública, sin auth) para obtener wallets 
+    por precio de entrada en un mercado de Polymarket.
+    condition_id = deep_data.get("conditionId")
+    """
+    url = f"https://synthesis.trade/api/v1/polymarket/market/{condition_id}/trades"
+    params = {"limit": limit, "offset": 0}
+    response = requests.get(url, params=params)
+    
+    if response.status_code != 200:
+        return {}
+    
+    trades = response.json().get("response", [])
+
+    from collections import defaultdict
+    price_map = defaultdict(lambda: {"wallets": {}, "trade_count": 0})
+
+    for trade in trades:
+        price = trade.get("price")
+        address = trade.get("address")
+        username = trade.get("username", "")
+        amount = float(trade.get("amount", 0))
+        side = trade.get("side")  # True = BUY, False = SELL
+
+        if price and address and side:  # solo bids (compras)
+            price_map[price]["trade_count"] += 1
+            if address not in price_map[price]["wallets"]:
+                price_map[price]["wallets"][address] = {
+                    "total_amount": 0.0,
+                    "username": username
+                }
+            price_map[price]["wallets"][address]["total_amount"] += amount
+
+    # Construir resultado: top wallets por precio, ordenadas por monto
+    result = {}
+    for price, data in sorted(price_map.items(), key=lambda x: float(x[0])):
+        top_wallets = sorted(
+            data["wallets"].items(),
+            key=lambda x: x[1]["total_amount"],
+            reverse=True
+        )[:5]  # top 5 por precio
+        result[price] = {
+            "unique_accounts": len(data["wallets"]),
+            "trade_count": data["trade_count"],
+            "top_wallets": [
+                {
+                    "address": addr,
+                    "username": info["username"],
+                    "total_amount_usd": round(info["total_amount"], 2)
+                }
+                for addr, info in top_wallets
+            ]
+        }
+
+    return result
 
 
 # ==========================================
