@@ -1,4 +1,4 @@
-# 🤖 Delfos Discord Bot
+# 🤖 Delfos Discord Bot (IN DEVELOPMENT)
 
 A Discord bot built with Python that reads structured JSON data and sends formatted embed messages to a specific channel.
 
