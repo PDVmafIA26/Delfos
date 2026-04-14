@@ -1,9 +1,5 @@
 # 🤖 Delfos Discord Bot (IN DEVELOPMENT)
 
-A Discord bot built with Python that reads structured JSON data and sends formatted embed messages to a specific channel.
-
-[![My Skills](https://skillicons.dev/icons?i=python,discord)](https://skillicons.dev/)
-
 ---
 
 ## 📋 Features
@@ -85,6 +81,7 @@ JSON_PATH=notification.json
 - [Python 3](https://www.python.org/)
 - [discord.py](https://discordpy.readthedocs.io/)
 - [python-dotenv](https://pypi.org/project/python-dotenv/)
+- [ ] [![My Skills](https://skillicons.dev/icons?i=python,discord)](https://skillicons.dev/)
 
 ---
 
