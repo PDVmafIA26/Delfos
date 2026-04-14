@@ -1,5 +1,6 @@
 - [ ] Dockerize (volume for assets), then delete dotenv dependency and the try/except in config.py.
-- [ ] (**Depends on REPORTING GUILD**) Ensure formatting has the required fields for each topic in templates.py/TEMPLATES.
+- [ ] Use a generic image if there is none in the petition.
+- [ ] Don't use templates but plain text, the templates.py/TEMPLATES logic goes to REPORTING GUILD.
 - [ ] Add logging.
-- [ ] Add testing.
 - [ ] Add missing type hints.
+- [ ] Change the CHAT_ID to use the group chat instead of the General chanel.
