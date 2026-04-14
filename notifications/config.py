@@ -16,5 +16,7 @@ BASE_URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
 
 CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "undefined_chat_id")
 
+DEFAULT_IMAGE = "assets/politics.jpg"
+
 # Base directory for the project
 BASE_DIR = Path(__file__).resolve().parent
