@@ -1,91 +1,52 @@
-# 🤖 Delfos Discord Bot (IN DEVELOPMENT)
+# Delfos
+Delfos is a high school project focused in real life event predictions. It uses inside trading analysis over polymarket to create its predictions.
+https://t.me/+mNquI5Ob4WNkNDRk
 
----
+[![My Skills](https://skillicons.dev/icons?i=python,docker,kafka,spark,airflow)](https://skillicons.dev)
+## Overview
 
-## 📋 Features
+### Featrures
 
-- Connects to a Discord server and sends messages to a configured channel
-- Reads notification data from a JSON file
-- Sends richly formatted Discord embeds with title, summary, details, and image
-- Color-coded embeds based on topic (politics, sports, tech, etc.)
-- All sensitive configuration managed via environment variables
 
----
+## Architecture
 
-## 🗂️ Project Structure
-
+## Structure
 ```
-discord_delfosbot/
-├── assets/
-│   └── politics.jpg        # Local images for embeds
-├── main.py                 # Bot entry point
-├── notification.json       # Notification data (not committed)
-├── .env                    # Environment variables (not committed)
-├── .env.example            # Environment variable template
-├── .gitignore
-├── pyproject.toml
-└── README.md
+├── infrastructure/       # Docker Compose files, database init scripts
+├── orchestration/        # Airflow DAGs
+├── processing/           # PySpark scripts and ML anomaly models
+├── extraction/           # Polymarket data producers
+├── notifications/        # Telegram Bot integration
+├── requirements.txt      # Global Python dependencies
+└── README.md             # Project documentation
 ```
+## Prerequisites 
+To run this project locally, you must have the following installed on your machine:
+* 
+## Installation 
 
----
-
-## ⚙️ Setup
-
-### 1. Clone the repository
-
-```bash
+**1. Clone the repository:**
 git clone https://github.com/PDVmafIA26/Delfos.git
 cd Delfos
-```
 
-### 2. Create a virtual environment and install dependencies
+## Usage
 
-```bash
-python -m venv .venv
-.venv\Scripts\activate      # Windows
-source .venv/bin/activate   # macOS / Linux
+## Team
+The contribuitors are structured in multidisciplinar topic based teams. Each team focuses in a certain topic such us Geopolitics, but each component has a different role within the project.
+The teams are the following:
+### Team 1: 
+* NAME - roles: Data ingest, data reporting
+* NAME - roles: Data analysis
+* NAME - roles: DB design,
 
-pip install discord.py python-dotenv
-```
 
-### 3. Configure environment variables
+##  Git Workflow & Contributing
+Since multiple groups are working on this repository, we follow a strict **GitFlow** branching model to prevent conflicts:
 
-Copy `.env.example` to `.env` and fill in your values:
-
-```bash
-cp .env.example .env
-```
-
-```env
-DISCORD_TOKEN=your_bot_token_here
-DISCORD_CANAL_ID=your_channel_id_here
-DISCORD_SERVER_ID=your_server_id_here
-JSON_PATH=notification.json
-```
-
-> ⚠️ Never commit your `.env` file. It is already listed in `.gitignore`.
-
-## 🔐 Environment Variables
-
-| Variable              | Description                        |
-| --------------------- | ---------------------------------- |
-| `DISCORD_TOKEN`     | Your Discord bot token             |
-| `DISCORD_CANAL_ID`  | ID of the target channel           |
-| `DISCORD_SERVER_ID` | ID of the Discord server           |
-| `JSON_PATH`         | Path to the notification JSON file |
-
----
-
-## 🛠️ Built With
-
-- [Python 3](https://www.python.org/)
-- [discord.py](https://discordpy.readthedocs.io/)
-- [python-dotenv](https://pypi.org/project/python-dotenv/)
-
- [![My Skills](https://skillicons.dev/icons?i=python,discord)](https://skillicons.dev/)
-
----
-
-## 📄 License
-
-This project is for internal use by the Delfos team.
+1. **Never commit directly to `main` or `develop`.**
+2. Create a new branch for your task from `develop`:
+   `git checkout -b feature/[task-description]`
+   *(Example: `feature/api-ingestion`)*
+3. Commit your changes with descriptive messages.
+4. Push your branch and open a **Pull Request (PR)** targeting the `develop` branch.
+5. At least one member from another group (or the instructor) must review and approve the PR before merging.

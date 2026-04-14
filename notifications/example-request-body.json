@@ -4,6 +4,6 @@
     "title": "Ejemplo de título",
     "summary": "Este es un resumen de ejemplo para la notificación.",
     "details": "Aquí se pueden incluir detalles adicionales.",
-    "image": "assets/politics.jpg"
+    "image": "notifications/assets/politics.jpg"
   }
 }
