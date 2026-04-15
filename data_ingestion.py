@@ -3,27 +3,7 @@ import requests
 import json
 import time
 from datetime import datetime, timezone
-
-def get_deep_market_info(market_id):
-    """
-    Fetches the detailed metadata (Deep JSON) for a specific market.
-    This includes the Event ID, Oracle information, and the token IDs 
-    required to query the Central Limit Order Book (CLOB).
-    
-    Args:
-        market_id (str): The unique identifier of the market.
-        
-    Returns:
-        dict: The full market metadata, or None if the request fails.
-    """
-    url = f"https://gamma-api.polymarket.com/markets/{market_id}"
-    response = requests.get(url)
-    
-    if response.status_code == 200:
-        return response.json()
-    else:
-        print(f"  [X] Failed fetching deep info for market {market_id}. Status: {response.status_code}")
-        return None
+from top_wallets_processor import *
 
 
 def get_order_book(token_id):
@@ -162,63 +142,6 @@ def run_advanced_ingestion(category_tag, keywords):
 
     return enriched_payloads
 
-def get_top_wallets_by_price_synthesis(condition_id, limit=500):
-    """
-    Usa Synthesis API (pública, sin auth) para obtener wallets 
-    por precio de entrada en un mercado de Polymarket.
-    condition_id = deep_data.get("conditionId")
-    """
-    url = f"https://synthesis.trade/api/v1/polymarket/market/{condition_id}/trades"
-    params = {"limit": limit, "offset": 0}
-    response = requests.get(url, params=params)
-    
-    if response.status_code != 200:
-        return {}
-    
-    trades = response.json().get("response", [])
-
-    from collections import defaultdict
-    price_map = defaultdict(lambda: {"wallets": {}, "trade_count": 0})
-
-    for trade in trades:
-        price = trade.get("price")
-        address = trade.get("address")
-        username = trade.get("username", "")
-        amount = float(trade.get("amount", 0))
-        side = trade.get("side")  # True = BUY, False = SELL
-
-        if price and address and side:  # solo bids (compras)
-            price_map[price]["trade_count"] += 1
-            if address not in price_map[price]["wallets"]:
-                price_map[price]["wallets"][address] = {
-                    "total_amount": 0.0,
-                    "username": username
-                }
-            price_map[price]["wallets"][address]["total_amount"] += amount
-
-    # Construir resultado: top wallets por precio, ordenadas por monto
-    result = {}
-    for price, data in sorted(price_map.items(), key=lambda x: float(x[0])):
-        top_wallets = sorted(
-            data["wallets"].items(),
-            key=lambda x: x[1]["total_amount"],
-            reverse=True
-        )[:5]  # top 5 por precio
-        result[price] = {
-            "unique_accounts": len(data["wallets"]),
-            "trade_count": data["trade_count"],
-            "top_wallets": [
-                {
-                    "address": addr,
-                    "username": info["username"],
-                    "total_amount_usd": round(info["total_amount"], 2)
-                }
-                for addr, info in top_wallets
-            ]
-        }
-
-    return result
-
 
 # ==========================================
 # MAIN EXECUTION BLOCK
@@ -244,3 +167,8 @@ if __name__ == "__main__":
             json.dump(final_data, file, indent=4, ensure_ascii=False)
             
         print(f"[✓] Data successfully saved to '{file_name}'.")
+        
+        # Automatically run top wallets ingestion with the market_ids from the pipeline
+        market_ids = [record["market_id"] for record in final_data]
+        print(f"\n[→] Starting top wallets ingestion for {len(market_ids)} markets...")
+        run_top_wallets_ingestion(market_ids)
