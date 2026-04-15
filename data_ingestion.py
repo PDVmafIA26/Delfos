@@ -1,9 +1,9 @@
-import markets as mar
+import data_ingestion.markets as mar
 import requests
 import json
 import time
 from datetime import datetime, timezone
-from top_wallets_processor import *
+from data_ingestion.top_wallets_processor import *
 
 
 def get_order_book(token_id):
