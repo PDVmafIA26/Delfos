@@ -8,7 +8,7 @@ from kafka import KafkaProducer
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# Kafka configuration (Adjust according to your environment)
+# Kafka configuration
 KAFKA_BROKER = "127.0.0.1:9092"
 KAFKA_TOPIC = "polymarket_raw_events"
 
@@ -39,23 +39,21 @@ def get_categories_for_message(message_data):
     """
     Determines which category or categories the event/market belongs to.
     
-    If the 'message_data' (payload) already brings the categories from David's 
-    or Jorge's prior extraction, it uses them. Otherwise, it extracts them 
+    If the 'message_data' (payload) already brings the categories from prior extraction, it uses them. Otherwise, it extracts them 
     based on the payload structure.
     """
-    # 1. If the message payload already includes pre-processed categories (e.g., from David's file 1)
+    # If the message payload already includes pre-processed categories
     if "categories" in message_data:
-        # Validate that they exist within Polymarket's main ecosystem
         return [cat for cat in message_data["categories"] if cat.lower() in POLYMARKET_MAIN_CATEGORIES]
     
-    # 2. If it's a single category attached by the pipeline
+    # If it's a single category attached by the pipeline
     if "category" in message_data:
         cat = message_data["category"].lower()
         if cat in POLYMARKET_MAIN_CATEGORIES:
             return [cat]
 
-    # 3. Fallback: If we are tracking a specific category stream in this WebSocket, 
-    # you can default to the tracked category slug (e.g., "tech" as per markets.py)
+    # Fallback: If we are tracking a specific category stream in this WebSocket, 
+    # default to the tracked category slug (e.g., "tech")
     # This ensures no message is lost in the Bronze layer.
     return ["tech"]
 
@@ -66,7 +64,7 @@ def process_and_send_to_kafka(message_data):
     
     It fulfills the data lake architectural requirements by:
     - Sending only the category in the message header, leaving the rest (id, info) in the body.
-    - If the message belongs to multiple categories, it sends an independent (duplicated) message for each one.
+    - If the message belongs to multiple categories, it sends an independent message for each one.
     """
     if not producer:
         logger.warning("Kafka producer is not available. Message not sent.")
@@ -75,7 +73,7 @@ def process_and_send_to_kafka(message_data):
     categories = get_categories_for_message(message_data)
     
     if not categories:
-        logger.warning("No valid Polymarket categories found for this message. Discarding to protect Bronze Layer structure.")
+        logger.warning("No valid categories found for this message. Discarding to protect Bronze Layer structure.")
         return
 
     # Send a duplicate message for each category to ensure correct folder partitioning in the Data Lake
@@ -104,10 +102,6 @@ def on_message(ws, message):
     logger.info("Message received from Polymarket WebSocket")
     try:
         data = json.loads(message)
-        
-        # Optional: ignore empty messages, pings, or WS reconnections.
-        # if data.get('event') == 'ping': return
-        
         # Process data and send to Kafka
         process_and_send_to_kafka(data)
     except json.JSONDecodeError:
@@ -132,7 +126,7 @@ def on_open(ws):
 
 
 def run_websocket():
-    # Polymarket WebSocket URL (CLOB API example, check official docs if necessary)
+    # Polymarket WebSocket URL (CLOB API example)
     websocket_url = "wss://ws-subscriptions-clob.polymarket.com/ws/market" 
     
     # Infinite automatic reconnection system in case of socket disconnection
