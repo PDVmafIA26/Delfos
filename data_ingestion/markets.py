@@ -1,14 +1,15 @@
 import requests
 import time
 import json
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
-def get_id_by_slug(tag_slug):
+def get_id_by_slug(session, tag_slug):
     """
-    Communicates with the Polymarket API to convert a category slug (e.g., 'tech') 
-    into its corresponding numeric ID.
+    Retrieves the numeric ID for a given category slug from the Polymarket Gamma API.
     
     Args:
-        tag_slug (str): The category identifier (e.g., 'tech', 'crypto', 'politics').
+        session (requests.Session): The HTTP session object.
+        tag_slug (str): The string identifier for the category (e.g., 'politics').
         
     Returns:
         int or None: The numeric ID of the tag, or None if the request fails.
@@ -16,7 +17,7 @@ def get_id_by_slug(tag_slug):
     url_tag = f"https://gamma-api.polymarket.com/tags/slug/{tag_slug}"
     print(f"Fetching numeric ID for category '{tag_slug}'...")
     
-    response_tag = requests.get(url_tag)
+    response_tag = session.get(url_tag)
     if response_tag.status_code != 200:
         print(f"[X] Error: Could not retrieve ID for tag '{tag_slug}'. Status code: {response_tag.status_code}")
         return None
@@ -24,155 +25,188 @@ def get_id_by_slug(tag_slug):
     tag_data = response_tag.json()
     tag_id = tag_data.get("id")
     print(f"[✓] Numeric ID found: {tag_id}\n")
-    
     return tag_id
 
-def get_tag_ids_by_slug_list(category_tags):
+def get_tag_ids_by_slug_list(session, category_tags):
     """
-    Iterates through a list of category slugs and retrieves their numeric IDs.
-    
-    Args:
-        category_tags (list): A list of category slugs (strings).
-        
-    Returns:
-        dict: A mapping of category slugs to their numeric IDs.
+    Iterates through a list of category slugs and maps them to their numeric IDs.
     """
     categories = {}
-
     for category in category_tags:
-        categories[category] = get_id_by_slug(category)
-    
+        categories[category] = get_id_by_slug(session, category)
     return categories
+
+def get_order_book(session, token_id):
+    """
+    Fetches the Central Limit Order Book (CLOB) data for a specific token.
     
-def get_markets_info(tag_slug, ids_categories_exclude, generate_json=False):
-    """
-    Fetches event and market data from the Polymarket Gamma API for a specific tag.
-    Extracts all markets, returns a mapping of market IDs to their CLOB token IDs,
-    and optionally returns the raw API response (JSON) without saving it to a file.
-
-    Args:
-        tag_slug (str): The category tag to query (e.g., 'tech', 'politics').
-        ids_categories_exclude (list): List of tag IDs to exclude.
-        generate_json (bool): If True, also returns the raw API response as a list of dictionaries.
-
     Returns:
-        If generate_json is False:
-            dict: A mapping where keys are market IDs (str) and values are lists of CLOB token IDs (list of str).
-        If generate_json is True:
-            tuple: (dict of market_tokens_mapping, list of all raw events from the API)
+        tuple: (token_id, order_book_data) to easily map the data back to the 
+               correct market after concurrent processing.
     """
-    # API Endpoint for paginated events
+    url = "https://clob.polymarket.com/book"
+    params = {"token_id": token_id}
+    
+    try:
+        response = session.get(url, params=params, timeout=5)
+        if response.status_code == 200:
+            return token_id, response.json()
+        else:
+            # Fallback to empty structures if the order book is unavailable
+            return token_id, {"bids": [], "asks": []}
+    except requests.exceptions.RequestException:
+        return token_id, {"bids": [], "asks": []}
+
+def get_markets_info(session, tag_slug, ids_categories_exclude, generate_json=False):
+    """
+    Fetches event and market data from the Polymarket Gamma API using pagination,
+    then concurrently fetches the associated order books for open markets.
+    """
     url_events = "https://gamma-api.polymarket.com/events/keyset"
     current_cursor = None
 
-    # Dictionary to store the lightweight mapping required for WebSocket subscriptions
     market_tokens_mapping = {}
-
-    # List to accumulate the raw events exactly as they come from the API
     all_api_events = []
+    
+    # Use a set to store unique tokens and avoid redundant API calls
+    tokens_to_fetch = set() 
 
     page = 1
-    print(f"--- Starting data extraction for tag: '{tag_slug}' | Return JSON: {generate_json} ---")
+    print(f"--- Starting data extraction for tag: '{tag_slug}' ---")
 
+    # PHASE 1: Paginate through events and collect tokens that require Order Books
     while True:
-        # Define query parameters (removed "closed": "false" to fetch everything)
         params = {
             "tag_slug": tag_slug,
             "limit": 100,
-            "exclude_tag_id": ids_categories_exclude
+            "exclude_tag_id": ids_categories_exclude,
+            "closed": "false" 
         }
-
-        # Append pagination cursor if available from the previous iteration
         if current_cursor:
             params["after_cursor"] = current_cursor
 
         try:
-            response = requests.get(url_events, params=params, timeout=10)
+            response = session.get(url_events, params=params, timeout=10)
             response.raise_for_status()
-
             data = response.json()
             events = data.get("events", [])
 
             for event in events:
                 for market in event.get("markets", []):
                     market_id = market.get("id")
+                    is_closed = market.get("closed", False)
+                    
                     if market_id:
-                        # Safely parse clobTokenIds, handling both stringified JSON and native lists
                         raw_tokens = market.get("clobTokenIds", "[]")
                         parsed_tokens = []
 
+                        # Safely parse the token IDs regardless of their data type
                         if isinstance(raw_tokens, str):
                             try:
                                 parsed_tokens = json.loads(raw_tokens)
                             except json.JSONDecodeError:
-                                pass  # Keep it as an empty list if decoding fails
+                                pass
                         elif isinstance(raw_tokens, list):
                             parsed_tokens = raw_tokens
 
-                        # Populate the mapping for the WebSocket payload
+                        # Overwrite with the cleanly parsed list for easier downstream processing
+                        market["clobTokenIds"] = parsed_tokens
                         market_tokens_mapping[market_id] = parsed_tokens
+                        market["order_books"] = {}
 
-            # Accumulate raw API payload if requested
+                        if parsed_tokens:
+                            if not is_closed:
+                                # Add tokens to the parallel download queue
+                                tokens_to_fetch.update(parsed_tokens)
+                            else:
+                                # Inject empty order books for closed markets to maintain schema consistency
+                                for token in parsed_tokens:
+                                    market["order_books"][token] = {"bids": [], "asks": []}
+
             if generate_json:
                 all_api_events.extend(events)
 
             print(f"Page {page} processed: {len(events)} events evaluated.")
-
-            # Retrieve the cursor for the next page
             current_cursor = data.get("next_cursor")
-
-            # A missing cursor or "LTE=" indicates the end of the dataset
+            
+            # Break the loop if there are no more pages
             if not current_cursor or current_cursor == "LTE=":
                 break
 
             page += 1
-            # Courtesy delay to respect API rate limits
-            time.sleep(0.2)
 
         except requests.exceptions.RequestException as e:
             print(f"\n[X] Critical HTTP request error: {e}")
             break
 
-    print(f"\n[✓] Extraction complete. Total markets extracted: {len(market_tokens_mapping)}")
+    # PHASE 2: Fetch Order Books concurrently to bypass the sequential bottleneck
+    print(f"\n[*] Fetching {len(tokens_to_fetch)} order books concurrently for '{tag_slug}'...")
+    fetched_order_books = {}
+    
+    # 50 workers provide a significant speedup while safely respecting the 150 req/sec API limit
+    with ThreadPoolExecutor(max_workers=50) as executor:
+        futures = {executor.submit(get_order_book, session, token): token for token in tokens_to_fetch}
+        for future in as_completed(futures):
+            token, ob_data = future.result()
+            fetched_order_books[token] = ob_data
+
+    # PHASE 3: Re-inject the successfully fetched order books back into their parent market JSON objects
+    if generate_json:
+        for event in all_api_events:
+            for market in event.get("markets", []):
+                if not market.get("closed", False):
+                    for token in market.get("clobTokenIds", []):
+                        if token in fetched_order_books:
+                            market["order_books"][token] = fetched_order_books[token]
+
+    print(f"[✓] Extraction complete for '{tag_slug}'. Total markets mapped: {len(market_tokens_mapping)}\n")
 
     if generate_json:
         return market_tokens_mapping, all_api_events
-    
     return market_tokens_mapping
+
 
 # ==========================================
 # MAIN EXECUTION BLOCK
 # ==========================================
 if __name__ == "__main__":
     CATEGORIES_TAG = ["politics", "geopolitics", "tech", "finance", "economy"]
-    categories = get_tag_ids_by_slug_list(CATEGORIES_TAG)
     
-    # This file should ideally only be generated during the first execution.
-    # For subsequent runs, the JSON should be loaded as a dictionary to save API requests.
-    # Therefore, this file should be stored in a persistent Docker volume.
-    json_string = json.dumps(categories, indent=2)
+    # Configure the session with connection pooling to handle high-throughput multithreading
+    http_session = requests.Session()
+    adapter = requests.adapters.HTTPAdapter(pool_connections=100, pool_maxsize=100)
+    http_session.mount('https://', adapter)
+    http_session.mount('http://', adapter)
+    
+    categories = get_tag_ids_by_slug_list(http_session, CATEGORIES_TAG)
 
     ids_categories_exclude = []
-    
-    # List to accumulate ALL events across all categories
     all_collected_events = []
-    # Dictionary to accumulate all market token mappings
     total_market_mapping = {}
 
     for category in CATEGORIES_TAG:
-        # Call the method requesting it to return the JSON as well (generate_json=True)
-        mapping, events_json = get_markets_info(category, ids_categories_exclude, generate_json=True)
+        mapping, events_json = get_markets_info(
+            session=http_session,
+            tag_slug=category, 
+            ids_categories_exclude=ids_categories_exclude, 
+            generate_json=True
+        )
         
-        # Accumulate the results into our global execution variables
         total_market_mapping.update(mapping)
         all_collected_events.extend(events_json)
 
-        ids_categories_exclude.append(categories[category])
+        # Append the current category ID to the exclusion list to prevent data duplication in subsequent iterations
+        if categories[category]:
+            ids_categories_exclude.append(categories[category])
+            
+    http_session.close()
     
-    output_filename = "polymarket_all_categories.json"
+    output_filename = "events.json"
+    print(f"\n--- Saving all data to {output_filename} ---")
+    
     with open(output_filename, "w", encoding="utf-8") as f:
         json.dump(all_collected_events, f, indent=4, ensure_ascii=False)
 
-    print("\n[✓] Process completed.")
+    print("\n[✓] Process successfully completed.")
     print(f"    - Total markets mapped: {len(total_market_mapping)}")
-    print(f"    - Total events saved to '{output_filename}': {len(all_collected_events)}")
+    print(f"    - Total events saved: {len(all_collected_events)}")
