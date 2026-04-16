@@ -1,7 +1,7 @@
 [project]
-name = "testing-bot"
+name = "Delfos_Notifications"
 version = "0.1.0"
-description = "Add your description here"
+description = "Notifications for Delfos' project"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
