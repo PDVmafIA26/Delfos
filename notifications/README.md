@@ -18,12 +18,13 @@
 discord_delfosbot/
 ├── assets/
 │   └── politics.jpg        # Local images for embeds
-├── main.py                 # Bot entry point
-├── notification.json       # Notification data (not committed)
+├── discordbot.py                 # Bot entry point
+├── example-request-body.json       # Notification data (not committed)
 ├── .env                    # Environment variables (not committed)
 ├── .env.example            # Environment variable template
 ├── .gitignore
 ├── pyproject.toml
+├── requirement.txt
 └── README.md
 ```
 
