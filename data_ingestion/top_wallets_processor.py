@@ -32,6 +32,7 @@ def get_top_wallets_by_price_synthesis(condition_id, limit=500):
         price = trade.get("price")
         address = trade.get("address")
         username = trade.get("username", "")
+        profile_image_url = trade.get("image") or trade.get("profile_image") or trade.get("profile_image_url") or trade.get("avatar") or trade.get("avatar_url") or ""
         amount = float(trade.get("amount", 0))
         side = trade.get("side")  # True = BUY
 
@@ -40,8 +41,13 @@ def get_top_wallets_by_price_synthesis(condition_id, limit=500):
             if address not in price_map[price]["wallets"]:
                 price_map[price]["wallets"][address] = {
                     "total_amount": 0.0,
-                    "username": username
+                    "username": username,
+                    "profile_image_url": profile_image_url
                 }
+            else:
+                # Mantener la primera imagen capturada si ya existe para la cartera
+                if not price_map[price]["wallets"][address].get("profile_image_url"):
+                    price_map[price]["wallets"][address]["profile_image_url"] = profile_image_url
             price_map[price]["wallets"][address]["total_amount"] += amount
 
     result = {}
@@ -58,6 +64,7 @@ def get_top_wallets_by_price_synthesis(condition_id, limit=500):
                 {
                     "address": addr,
                     "username": info["username"],
+                    "profile_image_url": info.get("profile_image_url", ""),
                     "total_amount_usd": round(info["total_amount"], 2)
                 }
                 for addr, info in top_wallets
@@ -85,7 +92,7 @@ def run_top_wallets_ingestion(market_ids):
         print(f"Processed top wallets for market {market_id}")
 
     # Save to JSON file
-    file_name = "top_wallets_data.json"
+    file_name = "data_ingestion/top_wallets_data.json"
     with open(file_name, "w", encoding="utf-8") as file:
         json.dump(all_wallets, file, indent=4, ensure_ascii=False)
     print(f"Top wallets data saved to '{file_name}'")
