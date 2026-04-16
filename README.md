@@ -32,11 +32,30 @@ cd Delfos
 ## Team
 The contribuitors are structured in multidisciplinar topic based teams. Each team focuses in a certain topic such us Geopolitics, but each component has a different role within the project.
 The teams are the following:
-### Team 1: 
-* NAME - roles: Data ingest, data reporting
-* NAME - roles: Data analysis
-* NAME - roles: DB design,
 
+### Team 1: 
+* Andrés @andpramor - roles: Systems, Reporting & Notifications.
+* Manuel J. @nastupiste - roles: Systems, Analysis & Notifications.
+* Tatiana @Tati314 - roles: Ingest, Bronze Layer & Analysis
+* Rubén @RubenPR2024 - roles: Ingest, Bronze Layer & Gold Layer
+
+### Team 2: 
+* Alejandro @BPA-SER-2223 - roles: Gold Layer & Analysis.
+* Raúl @RMTorrabadella04 - roles: Orchestration & Notifications
+* Jorge @jorgecg646 - roles: Ingest & Reporting
+* Pedro @Pedro-ZM - roles: Bronze Layer & Systems
+
+### Team 3: 
+* Eva M. @edev999 - roles: Orchestration & Gold Layer
+* Pablo @PabloBaezaGomez - roles: Ingest & Bronze Layer
+* Adrián @4drian04 - roles: Gold Layer, Orchestration, Reporting & Systems 
+* David @DavidCaraballoBulnes - roles: Ingest, Bronze Layer, Reporting & Notifications
+
+### Team 4: 
+* Ivana @Ivanasp43 - roles: Bronze Layer & Systems
+* Alejandro @Alebernabe5 - roles: Reporting & Orchestration
+* Belén @belenmrqz - roles: Analysis & Gold Layer
+* Paula @paulaschez - roles: Ingest & Notifications
 
 ##  Git Workflow & Contributing
 Since multiple groups are working on this repository, we follow a strict **GitFlow** branching model to prevent conflicts:
