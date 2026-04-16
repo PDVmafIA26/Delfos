@@ -2,113 +2,111 @@ import requests
 import time
 import json
 
-def get_polymarket_data(tag_slug, generate_json=False):
+def get_markets_info(tag_slug, generate_json=False):
     """
-    Fetches event and market data from the Polymarket Gamma API based on a specific tag.
-    Extracts active market IDs and optionally saves a cleaned JSON file of the events.
-    
+    Fetches event and market data from the Polymarket Gamma API for a specific tag.
+    Extracts active markets, returns a mapping of market IDs to their CLOB token IDs,
+    and optionally saves the filtered, raw API response to a JSON file.
+
     Args:
         tag_slug (str): The category tag to query (e.g., 'tech', 'politics').
-        generate_json (bool): If True, saves a formatted JSON file locally.
-        
+        generate_json (bool): If True, saves the filtered API response to a JSON file.
+
     Returns:
-        list: A list of unique, active market IDs.
+        dict: A mapping where keys are market IDs (str) and values are lists of CLOB token IDs (list of str).
     """
+    # API Endpoint for paginated events
     url_events = "https://gamma-api.polymarket.com/events/keyset"
-    current_cursor = None 
-    
-    total_market_ids = []
-    total_cleaned_events = []
+    current_cursor = None
+
+    # Dictionary to store the lightweight mapping required for WebSocket subscriptions
+    market_tokens_mapping = {}
+
+    # List to accumulate the raw events from the API (filtered for active markets only)
+    filtered_api_events = []
+
     page = 1
-    
-    print(f"--- Starting extraction for: {tag_slug} | Generate JSON: {generate_json} ---")
-    
+    print(f"--- Starting data extraction for tag: '{tag_slug}' | Generate JSON: {generate_json} ---")
+
     while True:
-        # Define the API query parameters
+        # Define query parameters
         params = {
             "tag_slug": tag_slug,
             "limit": 100,
-            "closed": "false" # Fetch only open events
+            "closed": "false"  # Instructs the API to fetch mostly open events
         }
-        
-        # Append pagination cursor if it exists from the previous iteration
+
+        # Append pagination cursor if available from the previous iteration
         if current_cursor:
             params["after_cursor"] = current_cursor
-            
+
         try:
             response = requests.get(url_events, params=params, timeout=10)
-            response.raise_for_status() # Raise an exception for HTTP errors
-            
+            response.raise_for_status()
+
             data = response.json()
             events = data.get("events", [])
-            
+
             for event in events:
-                # Create a shallow copy of the event to preserve original metadata
-                cleaned_event = event.copy()
-                event_market_ids = []
-                
-                # Iterate through the markets associated with the current event
+                active_markets_in_event = []
+
                 for market in event.get("markets", []):
-                    # Filter out markets that are already closed
+                    # Strict check to ensure the market is still active
                     if market.get("closed") is False:
+                        active_markets_in_event.append(market)
+
                         market_id = market.get("id")
                         if market_id:
-                            event_market_ids.append(market_id)
-                            total_market_ids.append(market_id)
-                
-                # REPLACE the complex market objects with a simple list of market IDs
-                cleaned_event["markets"] = event_market_ids
-                total_cleaned_events.append(cleaned_event)
-            
-            print(f"Page {page}: processed {len(events)} events.")
+                            # Safely parse clobTokenIds, handling both stringified JSON and native lists
+                            raw_tokens = market.get("clobTokenIds", "[]")
+                            parsed_tokens = []
 
-            # Check for the next pagination cursor
+                            if isinstance(raw_tokens, str):
+                                try:
+                                    parsed_tokens = json.loads(raw_tokens)
+                                except json.JSONDecodeError:
+                                    pass  # Keep it as an empty list if decoding fails
+                            elif isinstance(raw_tokens, list):
+                                parsed_tokens = raw_tokens
+
+                            # Populate the mapping for the WebSocket payload
+                            market_tokens_mapping[market_id] = parsed_tokens
+
+                # If the event contains at least one active market, keep it for the JSON dump
+                if active_markets_in_event:
+                    # Overwrite the 'markets' list with our strictly filtered active markets
+                    event["markets"] = active_markets_in_event
+                    filtered_api_events.append(event)
+
+            print(f"Page {page} processed: {len(events)} events evaluated.")
+
+            # Retrieve the cursor for the next page
             current_cursor = data.get("next_cursor")
-            
-            # 'LTE=' or None signifies the end of the API dataset
+
+            # A missing cursor or "LTE=" indicates the end of the dataset
             if not current_cursor or current_cursor == "LTE=":
                 break
-                
+
             page += 1
-            # Rate limiting courtesy pause to prevent getting blocked by the API
-            time.sleep(0.2) 
-            
+            # Courtesy delay to respect API rate limits
+            time.sleep(0.2)
+
         except requests.exceptions.RequestException as e:
-            print(f"\n[X] Critical request error: {e}")
+            print(f"\n[X] Critical HTTP request error: {e}")
             break
-            
-    # Remove duplicates from the global market IDs list while preserving order
-    unique_market_ids = list(dict.fromkeys(total_market_ids))
-    print(f"\n[✓] Total: {len(unique_market_ids)} unique active Market IDs extracted.")
-    
+
+    print(f"\n[✓] Extraction complete. Total active markets extracted: {len(market_tokens_mapping)}")
+
+    # Perform a direct JSON dump of the filtered API payload if requested
     if generate_json:
-        # Remove duplicate events based on their unique 'id'
-        unique_events_dict = {evt.get("id"): evt for evt in total_cleaned_events if evt.get("id")}
-        unique_events = list(unique_events_dict.values())
-        
-        # 1. CREATE THE FINAL JSON STRUCTURE
-        json_structure = {
-            "category": tag_slug,
-            "events": unique_events
-        }
-        
-        # 2. CONVERT TO JSON STRING (with indentation for readability)
-        formatted_json = json.dumps(json_structure, indent=4)
-        
-        # 3. SAVE IT TO A LOCAL FILE
         filename = f"polymarket_{tag_slug}.json"
         with open(filename, "w", encoding="utf-8") as file:
-            file.write(formatted_json)
-            
-        print(f"[✓] JSON file successfully generated and saved as: {filename}")
-        
-        return unique_market_ids
-    
-    else:
-        # If generate_json is False, we simply return the list of IDs
-        return unique_market_ids
-    
-    
+            json.dump(filtered_api_events, file, indent=4, ensure_ascii=False)
+
+        print(f"[✓] Filtered API payload successfully saved to: {filename}")
+
+    return market_tokens_mapping
+
 # ==========================================
 # MAIN EXECUTION BLOCK
 # ==========================================
@@ -116,4 +114,4 @@ if __name__ == "__main__":
     CATEGORIES_TAG = ["politics", "geopolitics", "tech", "finance", "economy"]
 
     for category in CATEGORIES_TAG:
-        get_polymarket_data(category, generate_json=True)
+        get_markets_info(category, generate_json=True)

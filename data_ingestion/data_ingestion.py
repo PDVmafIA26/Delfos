@@ -3,7 +3,7 @@ import requests
 import json
 import time
 from datetime import datetime, timezone
-from data_ingestion.markets import get_polymarket_data
+from data_ingestion.markets import get_markets_info
 from data_ingestion.top_wallets_processor import *
 
 
@@ -172,4 +172,4 @@ if __name__ == "__main__":
         # Automatically run top wallets ingestion with the market_ids from the pipeline
         market_ids = [record["market_id"] for record in final_data]
         print(f"\n[→] Starting top wallets ingestion for {len(market_ids)} markets...")
-        get_polymarket_data(market_ids)
+        get_markets_info(market_ids)

@@ -3,6 +3,7 @@ import logging
 import time
 import websocket
 from kafka import KafkaProducer
+from markets import get_markets_info
 
 # Basic logging configuration
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -11,6 +12,7 @@ logger = logging.getLogger(__name__)
 # Kafka configuration
 KAFKA_BROKER = "127.0.0.1:9092"
 KAFKA_TOPIC = "polymarket_raw_events"
+INTERESTING_EVENT_TYPES = ["price_change", "book", "last_trade_price", "best_bid_ask", "market_resolved"]
 
 # Initialize Kafka Producer
 try:
@@ -102,8 +104,26 @@ def on_message(ws, message):
     logger.info("Message received from Polymarket WebSocket")
     try:
         data = json.loads(message)
+
+        event_type = data.get("event_type")
+        
+        if event_type == "market_resolved":            
+            # 1. Desuscribirse para limpiar el feed
+            resolved_tokens = data.get("assets_ids", [])
+            
+            if resolved_tokens:
+                unsubscribe_message = {
+                    "operation": "unsubscribe", # La palabra mágica según la API
+                    "assets_ids": resolved_tokens
+                }
+                # Enviamos la orden al servidor de Polymarket a través del socket
+                ws.send(json.dumps(unsubscribe_message))
+                logger.info(f"Desuscrito automáticamente de los tokens finalizados: {resolved_tokens}")
+
         # Process data and send to Kafka
-        process_and_send_to_kafka(data)
+        if event_type in INTERESTING_EVENT_TYPES:
+            process_and_send_to_kafka(data)
+
     except json.JSONDecodeError:
         logger.error("Received message is not a valid JSON")
     except Exception as e:
@@ -115,17 +135,18 @@ def on_error(ws, error):
 def on_close(ws, close_status_code, close_msg):
     logger.warning("### WebSocket closed ###")
 
-def on_open(ws):
+def on_open(ws, assets_ids):
     logger.info("WebSocket connected. Sending subscription payload...")
     
     subscribe_message = {
-        "assets": ["0xTokenID_1", "0xTokenID_2"],
-        "type": "market"
+        "assets_ids": assets_ids,
+        "type": "market",
+        "custom_feature_enabled": True
     }
     ws.send(json.dumps(subscribe_message))
 
 
-def run_websocket():
+def run_websocket(assets_ids):
     # Polymarket WebSocket URL (CLOB API example)
     websocket_url = "wss://ws-subscriptions-clob.polymarket.com/ws/market" 
     
@@ -140,10 +161,11 @@ def run_websocket():
             on_close=on_close
         )
         
-        ws.run_forever()
+        ws.run_forever(ping_interval=10, ping_timeout=5) # Ping-Pong system required by Polymarket
         logger.info("Waiting 5 seconds before reconnecting...")
         time.sleep(5)
 
 
 if __name__ == "__main__":
-    run_websocket()
+    assets_ids = [token for market in get_markets_info("tech").values() for token in market]
+    run_websocket(assets_ids)
