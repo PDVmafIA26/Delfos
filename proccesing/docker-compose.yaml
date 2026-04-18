@@ -45,19 +45,41 @@ services:
       echo 'Topic creation successful. Current topic list:'
       kafka-topics --bootstrap-server kafka:9092 --list
       "
-  # Este es el servicio de almacenamiento (MinIO)
-  minio:
-    image: minio/minio:latest
-    container_name: minio_server
+
+  # NUEVA BASE DE DATOS
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
     ports:
-      - "9000:9000"    # Puerto para que los scripts manden datos
-      - "9001:9001"    # Puerto para que se entre a ver los archivos (Consola)
+      - "27017:27017"
     environment:
-      MINIO_ROOT_USER: admin           
-      MINIO_ROOT_PASSWORD: administrador
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=administrador
     volumes:
-      - ./datos_minio:/data           # Esto guarda los datos en una carpeta real del pc
-    command: server /data --console-address ":9001"
+      - ./datos_mongo:/data/db
+
+  # Panel de control visual para MongoDB (Puerto 8081)
+  mongo-express:
+    image: mongo-express
+    container_name: mongo-express
+    depends_on:
+      - mongodb
+    ports:
+      - "8081:8081"
+    environment:
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=admin
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=administrador
+      - ME_CONFIG_MONGODB_URL=mongodb://admin:administrador@mongodb:27017/
+
+  bronze-bridge:
+    build: .
+    container_name: bronze-bridge
+    depends_on:
+      - kafka
+      - mongodb
+    volumes:
+      - ./scripts:/app
+    restart: always
   
   spark-master:
     image: apache/spark:3.5.1
@@ -99,7 +121,7 @@ services:
     depends_on:
       - spark-master
       - postgres
-      - minio
+      - mongodb
     volumes:
       - ./spark:/app
     environment:
@@ -107,7 +129,7 @@ services:
     command: >
       /opt/spark/bin/spark-submit
       --conf spark.jars.ivy=/tmp/.ivy2
-      --packages org.apache.hadoop:hadoop-aws:3.3.4,com.amazonaws:aws-java-sdk-bundle:1.12.262,org.postgresql:postgresql:42.7.3
+      --packages org.mongodb.spark:mongo-spark-connector_2.12:10.3.0,org.postgresql:postgresql:42.7.3
       --master spark://spark-master:7077
       /app/spark-batch.py
   

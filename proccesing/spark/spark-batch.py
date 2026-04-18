@@ -2,19 +2,15 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import *
 from pyspark.sql.types import *
 
-# Create a Spark session with configuration for MinIO (S3)
+# Spark session for MongoDB
 spark = SparkSession.builder \
-    .appName("PolymarketBatchMinIO") \
-    .config("spark.hadoop.fs.s3a.endpoint", "http://minio:9000") \
-    .config("spark.hadoop.fs.s3a.access.key", "admin") \
-    .config("spark.hadoop.fs.s3a.secret.key", "administrador") \
-    .config("spark.hadoop.fs.s3a.path.style.access", "true") \
-    .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem") \
+    .appName("PolymarketBatchMongo") \
+    .config("spark.mongodb.read.connection.uri", "mongodb://admin:administrador@mongodb:27017/markets.tech_markets") \
     .getOrCreate()
 
 spark.sparkContext.setLogLevel("WARN")
 
-# Define schema for incoming Kafka JSON messages
+# Schema (opcional pero recomendable)
 schema = StructType([
     StructField("market_id", StringType(), True),
     StructField("ingestion_timestamp", StringType(), True),
@@ -22,22 +18,24 @@ schema = StructType([
     StructField("volume", StringType(), True)
 ])
 
-# Read raw data from MinIO
-df = spark.read.schema(schema).json("s3a://nombre-bucket/")
+# Read data from MongoDB
+df = spark.read \
+    .format("mongodb") \
+    .load()
 
 # Transform fields
 df = df \
     .withColumn("volume", col("volume").cast("double")) \
     .withColumn("timestamp", to_timestamp(col("ingestion_timestamp")))
 
-# Compute historical statistics per market and question
+# Compute stats
 stats = df.groupBy("market_id").agg(
     avg("volume").alias("mean_volume"),
     stddev("volume").alias("std_volume"),
     count("*").alias("num_records")
 )
 
-# Write results to PostgreSQL
+# Write to PostgreSQL
 stats.write \
     .format("jdbc") \
     .option("url", "jdbc:postgresql://postgres:5432/markets") \
@@ -48,4 +46,4 @@ stats.write \
     .mode("overwrite") \
     .save()
 
-print("Batch job completed: data read from MinIO and saved in PostgreSQL.")
+print("Batch job completed: data read from MongoDB and saved in PostgreSQL.")
