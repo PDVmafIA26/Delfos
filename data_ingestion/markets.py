@@ -1,7 +1,11 @@
 import requests
-import time
+from datetime import datetime, timezone
 import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import os
+
+# File name for caching category tag IDs
+TAGS_FILE = "categories_tags.json"
 
 def get_id_by_slug(session, tag_slug):
     """
@@ -165,6 +169,35 @@ def get_markets_info(session, tag_slug, ids_categories_exclude, generate_json=Fa
         return market_tokens_mapping, all_api_events
     return market_tokens_mapping
 
+def create_tag_file(session, category_tags):
+    """
+    Obtains categories tag IDs and stores them in a file, to save API calls.
+    """
+    print(f"--- Create cache file: {TAGS_FILE} ---")
+
+    # Use the previous function to get the mapping of category slugs to their numeric IDs
+    tags_map = get_tag_ids_by_slug_list(session, category_tags)
+    
+    data_to_save = tags_map
+    
+    
+    with open(TAGS_FILE, "w", encoding="utf-8") as f:
+        json.dump(data_to_save, f, indent=4, ensure_ascii=False)
+    print(f"[✓] Tags file created successfully.\n")
+
+
+def read_tag_file():
+    """
+    Reads tags from the local file.
+    """
+    if not os.path.exists(TAGS_FILE):
+        return None
+    
+    with open(TAGS_FILE, "r", encoding="utf-8") as f:
+        data = json.load(f)
+        # Return the categories mapping, or an empty dict if the file structure is unexpected
+        return data
+
 
 # ==========================================
 # MAIN EXECUTION BLOCK
@@ -178,7 +211,10 @@ if __name__ == "__main__":
     http_session.mount('https://', adapter)
     http_session.mount('http://', adapter)
     
-    categories = get_tag_ids_by_slug_list(http_session, CATEGORIES_TAG)
+    if not os.path.exists(TAGS_FILE):
+        create_tag_file(http_session, CATEGORIES_TAG)
+
+    categories = read_tag_file()
 
     ids_categories_exclude = []
     all_collected_events = []
@@ -201,11 +237,21 @@ if __name__ == "__main__":
             
     http_session.close()
     
-    output_filename = "events.json"
+    now = datetime.now(timezone.utc)
+    
+    timestamp_str = now.strftime("%Y-%m-%d_%H-%M-%S")
+
+    output_filename = "events" + timestamp_str + ".json"
+
     print(f"\n--- Saving all data to {output_filename} ---")
     
+    final_output = {
+        "ingestion_timestamp": datetime.now(timezone.utc).isoformat(),
+        "events": all_collected_events
+    }
+
     with open(output_filename, "w", encoding="utf-8") as f:
-        json.dump(all_collected_events, f, indent=4, ensure_ascii=False)
+        json.dump(final_output, f, indent=4, ensure_ascii=False)
 
     print("\n[✓] Process successfully completed.")
     print(f"    - Total markets mapped: {len(total_market_mapping)}")
