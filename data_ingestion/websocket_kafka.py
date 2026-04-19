@@ -1,6 +1,7 @@
 import json
 import logging
 import time
+import requests
 import websocket
 from kafka import KafkaProducer
 from markets import get_markets_info
@@ -155,7 +156,7 @@ def run_websocket(assets_ids):
         logger.info(f"Connecting to {websocket_url}...")
         ws = websocket.WebSocketApp(
             websocket_url,
-            on_open=on_open,
+            on_open=lambda ws:on_open(ws, assets_ids),
             on_message=on_message,
             on_error=on_error,
             on_close=on_close
@@ -167,5 +168,12 @@ def run_websocket(assets_ids):
 
 
 if __name__ == "__main__":
-    assets_ids = [token for market in get_markets_info("tech").values() for token in market]
+
+    # Para probar
+    http_session = requests.Session()
+    adapter = requests.adapters.HTTPAdapter(pool_connections=100, pool_maxsize=100)
+    http_session.mount('https://', adapter)
+    http_session.mount('http://', adapter)
+    
+    assets_ids = [token for market in get_markets_info(session= http_session, tag_slug="tech", ids_categories_exclude="").values() for token in market]
     run_websocket(assets_ids)
