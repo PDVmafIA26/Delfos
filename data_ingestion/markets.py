@@ -143,19 +143,21 @@ def get_markets_info(session, tag_slug, ids_categories_exclude, generate_json=Fa
             print(f"\n[X] Critical HTTP request error: {e}")
             break
 
-    # PHASE 2: Fetch Order Books concurrently to bypass the sequential bottleneck
-    print(f"\n[*] Fetching {len(tokens_to_fetch)} order books concurrently for '{tag_slug}'...")
-    fetched_order_books = {}
     
-    # 50 workers provide a significant speedup while safely respecting the 150 req/sec API limit
-    with ThreadPoolExecutor(max_workers=50) as executor:
-        futures = {executor.submit(get_order_book, session, token): token for token in tokens_to_fetch}
-        for future in as_completed(futures):
-            token, ob_data = future.result()
-            fetched_order_books[token] = ob_data
 
     # PHASE 3: Re-inject the successfully fetched order books back into their parent market JSON objects
     if generate_json:
+        # PHASE 2: Fetch Order Books concurrently to bypass the sequential bottleneck
+        print(f"\n[*] Fetching {len(tokens_to_fetch)} order books concurrently for '{tag_slug}'...")
+        fetched_order_books = {}
+        
+        # 50 workers provide a significant speedup while safely respecting the 150 req/sec API limit
+        with ThreadPoolExecutor(max_workers=50) as executor:
+            futures = {executor.submit(get_order_book, session, token): token for token in tokens_to_fetch}
+            for future in as_completed(futures):
+                token, ob_data = future.result()
+                fetched_order_books[token] = ob_data
+                
         for event in all_api_events:
             for market in event.get("markets", []):
                 if not market.get("closed", False):
