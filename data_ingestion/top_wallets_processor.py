@@ -17,13 +17,24 @@ def get_top_wallets_by_price_synthesis(condition_id, limit=500):
     Usa Synthesis API para obtener wallets por precio.
     """
     url = f"https://synthesis.trade/api/v1/polymarket/market/{condition_id}/trades"
-    params = {"limit": limit, "offset": 0}
-    response = requests.get(url, params=params)
     
-    if response.status_code != 200:
-        return {}
+    all_trades = []
+    offset = 0
+    while True:
+        params = {"limit": limit, "offset": offset}
+        response = requests.get(url, params=params)
+        
+        if response.status_code != 200:
+            break
+        
+        trades = response.json().get("response", [])
+        if not trades:
+            break
+        
+        all_trades.extend(trades)
+        offset += limit
     
-    trades = response.json().get("response", [])
+    trades = all_trades
 
     from collections import defaultdict
     price_map = defaultdict(lambda: {"wallets": {}, "trade_count": 0})
