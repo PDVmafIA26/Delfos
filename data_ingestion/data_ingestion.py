@@ -1,38 +1,74 @@
 from markets import obtain_event_data
 from top_wallets_processor import run_top_wallets_ingestion
-from websocket_kafka import run_websocket
+from websocket_ingestor import run_websocket
 import threading
 import requests
+from kafka_manager import get_producer
 
-CATEGORIES_TAG = ["politics", "geopolitics", "tech", "finance", "economy"]
+def main():
 
-# Configurar sesión HTTP
-http_session = requests.Session()
-adapter = requests.adapters.HTTPAdapter(pool_connections=100, pool_maxsize=100)
-http_session.mount('https://', adapter)
-http_session.mount('http://', adapter)
+    CATEGORIES_TAG = ["politics", "geopolitics", "tech", "finance", "economy"]
+    # Configurar sesión HTTP
+    http_session = requests.Session()
+    adapter = requests.adapters.HTTPAdapter(pool_connections=100, pool_maxsize=100)
+    http_session.mount('https://', adapter)
+    http_session.mount('http://', adapter)
 
-market_mapping, collected_events = obtain_event_data(http_session, CATEGORIES_TAG)
+    stop_event = threading.Event()
+    websocket_thread = None
 
-# Obtains conditions IDs from the markets
-all_market_ids = market_mapping.keys()
-# Obtains all assets IDs from the markets
-all_assets_ids = [token for market in market_mapping.values() for token in market]
+    try: 
 
-print(f"    - Total markets mapped: {len(market_mapping)}")
-print(f"    - Total events saved: {len(collected_events)}")
+        market_mapping, collected_events = obtain_event_data(http_session, CATEGORIES_TAG)
 
-# Execute ingestion of top wallets from all markets
-run_top_wallets_ingestion(all_market_ids)
+        # Obtains conditions IDs from the markets
+        all_market_ids = market_mapping.keys()
+        # Obtains all assets IDs from the markets
+        all_assets_ids = [token for market in market_mapping.values() for token in market]
 
-# Execute WebSocket in a separate thread to avoid blocking
-websocket_thread = threading.Thread(target=run_websocket, args=(all_assets_ids,))
-websocket_thread.daemon = True
-websocket_thread.start()
+        print(f"    - Total markets mapped: {len(market_mapping)}")
+        print(f"    - Total events saved: {len(collected_events)}")
 
-print("WebSocket ingestion started in background.")
+        # Fetch top wallets concurrently while WebSocket streams
+        run_top_wallets_ingestion(http_session, all_market_ids)
+        get_producer().flush()
 
-http_session.close()
+        # Execute WebSocket in a separate thread to avoid blocking
+        # websocket_thread = threading.Thread(target=run_websocket, args=(all_assets_ids,stop_event))
+        # websocket_thread.daemon = True
+        # websocket_thread.start()
+        # print("WebSocket ingestion started in background.")
 
-# Keep the main script running
-websocket_thread.join()
+        # # NOTE: WebSocket is started after top_wallets ingestion completes.
+        # # This is intentional during development to keep terminal output readable.
+        # # In production, start the WebSocket first to avoid missing market data
+        # # while top_wallets ingestion is running.
+
+        
+        # while websocket_thread.is_alive():
+        #     websocket_thread.join(timeout=1.0)
+
+    except KeyboardInterrupt:
+        print("\nShutdown signal detected. Starting graceful shutdown...")
+
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        raise  
+    finally:
+        print("Closing HTTP connections...")
+        http_session.close()
+
+        if websocket_thread and websocket_thread.is_alive():
+            if hasattr(stop_event, 'ws'):
+                stop_event.ws.close()
+            stop_event.set()
+            websocket_thread.join(timeout=5.0)
+        
+        print("Flushing remaining Kafka messages...")
+        get_producer().flush()
+        
+        print("Shutdown complete.")
+
+
+if __name__ == "__main__":
+    main()
