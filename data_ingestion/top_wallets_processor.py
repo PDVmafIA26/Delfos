@@ -35,10 +35,12 @@ def _process_single_market(session, condition_id):
 
                 # Send data to Kafka
                 try:
-                    get_producer().send_data(
-                        topic="top_wallets", data=market_data, key=str(condition_id)
-                    )
-                    #print(f"Top wallets (Kafka) -> Market {condition_id}")
+                    producer = get_producer()
+                    if producer:
+                        get_producer().send_data(
+                            topic="top_wallets", data=market_data, key=str(condition_id)
+                        )
+                        #print(f"Top wallets (Kafka) -> Market {condition_id}")
                 except Exception as e:
                     print(f"Error sending market {condition_id} to Kafka: {e}")
 

@@ -47,13 +47,14 @@ def on_message(ws, message):
         if event_type in INTERESTING_EVENT_TYPES:
             try:
                 market_id = data.get("market_id")
-                get_producer().send_data(
-                    topic="websockets",
-                    data=data,
-                    key=str(market_id) if market_id else None,
-                )
-                logger.info(f"Message sent to Kafka")
-
+                producer = get_producer()
+                if producer:
+                    get_producer().send_data(
+                        topic="websockets",
+                        data=data,
+                        key=str(market_id) if market_id else None,
+                    )
+                    logger.info(f"Message sent to Kafka")
             except Exception as e:
                 logger.error(f"Error sending message to Kafka: {e}")
 

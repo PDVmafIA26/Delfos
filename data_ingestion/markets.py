@@ -1,4 +1,5 @@
 import requests
+import time
 from datetime import datetime, timezone
 import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -41,26 +42,45 @@ def get_tag_ids_by_slug_list(session, category_tags):
         categories[category] = get_id_by_slug(session, category)
     return categories
 
-def get_order_book(session, token_id):
+def get_order_book(session, token_id, max_retries=3):
     """
     Fetches the Central Limit Order Book (CLOB) data for a specific token.
-    
-    Returns:
-        tuple: (token_id, order_book_data) to easily map the data back to the 
-               correct market after concurrent processing.
+    Includes 429 (Rate Limit) error handling with exponential backoff and
+    silences 404 (Not Found) errors to keep the console clean.
     """
     url = "https://clob.polymarket.com/book"
     params = {"token_id": token_id}
+    empty_book = {"bids": [], "asks": []}
     
-    try:
-        response = session.get(url, params=params, timeout=5)
-        if response.status_code == 200:
-            return token_id, response.json()
-        else:
-            # Fallback to empty structures if the order book is unavailable
-            return token_id, {"bids": [], "asks": []}
-    except requests.exceptions.RequestException:
-        return token_id, {"bids": [], "asks": []}
+    for attempt in range(max_retries):
+        try:
+            response = session.get(url, params=params, timeout=5)
+            
+            # 1. Success: We got the data
+            if response.status_code == 200:
+                return token_id, response.json()
+            
+            # 2. Token without an active order book: Silence the error and return empty
+            if response.status_code == 404:
+                return token_id, empty_book
+                
+            # 3. Rate Limit: Wait (1s, 2s, 4s...) and retry
+            if response.status_code == 429:
+                time.sleep(2 ** attempt)
+                continue
+                
+            # 4. Any other HTTP error (500, 502, 503...): Log it and exit
+            print(f"[X] Unexpected HTTP {response.status_code} error for token {token_id}")
+            return token_id, empty_book
+            
+        except requests.exceptions.RequestException as e:
+            # Connection error, network drop, or timeout
+            print(f"[X] Network exception for token {token_id}: {e}")
+            time.sleep(1)
+            
+    # Fallback if all loop retries are exhausted
+    print(f"[!] Retries exhausted for token {token_id}.")
+    return token_id, empty_book
 
 def get_markets_info(session, tag_slug, ids_categories_exclude, generate_json=False):
     """
@@ -149,7 +169,7 @@ def get_markets_info(session, tag_slug, ids_categories_exclude, generate_json=Fa
     fetched_order_books = {}
     
     # 50 workers provide a significant speedup while safely respecting the 150 req/sec API limit
-    with ThreadPoolExecutor(max_workers=50) as executor:
+    with ThreadPoolExecutor(max_workers=10) as executor:
         futures = {executor.submit(get_order_book, session, token): token for token in tokens_to_fetch}
         for future in as_completed(futures):
             token, ob_data = future.result()
@@ -167,11 +187,13 @@ def get_markets_info(session, tag_slug, ids_categories_exclude, generate_json=Fa
             # Once the event information is complete, it is sent to Kafka.
             event_id = str(event.get("id", ""))
             try:
-                get_producer().send_data(
-                    topic="events", 
-                    data=event, 
-                    key=event_id if event_id else None
-                )
+                producer = get_producer()
+                if producer:
+                    producer.send_data(
+                        topic="events", 
+                        data=event, 
+                        key=event_id if event_id else None
+                    )
             except Exception as e:
                 print(f"Error sending event '{event_id}' to Kafka: {e}")
     print(f"[✓] Extraction complete for '{tag_slug}'. Total markets mapped: {len(market_tokens_mapping)}\n")
