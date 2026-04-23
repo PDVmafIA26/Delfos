@@ -1,6 +1,9 @@
 import requests
 import json
 from datetime import datetime, timezone
+from typing import Dict, List, Any, Optional, Set
+from collections import defaultdict
+from pathlib import Path
 
 def get_deep_market_info(market_id):
     """
@@ -20,21 +23,36 @@ def get_top_wallets_by_price_synthesis(condition_id, limit=500):
     
     all_trades = []
     offset = 0
-    while True:
+    max_pages = 5  # Limit to 5 pages maximum to prevent infinite loops
+
+    for page in range(max_pages):
         params = {"limit": limit, "offset": offset}
-        response = requests.get(url, params=params)
-        
-        if response.status_code != 200:
+        try:
+            response = requests.get(url, params=params, timeout=30)
+            
+            if response.status_code != 200:
+                break
+            
+            trades = response.json().get("response", [])
+            if not trades:
+                break
+            
+            all_trades.extend(trades)
+
+            # If we receive fewer trades than requested, it's the last page
+            if len(trades) < limit:
+                break
+
+            offset += limit
+
+        except Exception as e:
+            print(f"  [WARN] Error fetching trades: {e}")
             break
-        
-        trades = response.json().get("response", [])
-        if not trades:
-            break
-        
-        all_trades.extend(trades)
-        offset += limit
     
     trades = all_trades
+
+    if not trades:
+        return {}
 
     from collections import defaultdict
     price_map = defaultdict(lambda: {"wallets": {}, "trade_count": 0})
@@ -107,3 +125,39 @@ def run_top_wallets_ingestion(market_ids):
     with open(file_name, "w", encoding="utf-8") as file:
         json.dump(all_wallets, file, indent=4, ensure_ascii=False)
     print(f"Top wallets data saved to '{file_name}'")
+
+     # Prevent duplicates
+    unique_wallets = set()
+    
+    # Iterate through each market's data
+    for market_id, market_data in all_wallets.items():
+        wallets_per_price = market_data.get("wallets_per_bid_price", {})
+        
+        # Iterate through each price level within the market
+        for price_level, price_data in wallets_per_price.items():
+            top_wallets = price_data.get("top_wallets", [])
+            
+            # Extract wallet address from each top wallet entry
+            for wallet in top_wallets:
+                address = wallet.get("address")
+                # Only add valid Ethereum addresses (starting with 0x)
+                if address and address.startswith("0x"):
+                    unique_wallets.add(address)
+    
+    # Save unique wallets list to JSON file for later enrichment
+    unique_file_name = "data_ingestion/unique_wallets_list.json"
+    unique_data = {
+        "generated_at": datetime.now(timezone.utc).isoformat(), # UTC timestamp for reproducibility
+        "total_unique_wallets": len(unique_wallets), # Count of unique addresses found
+        "wallet_addresses": list(unique_wallets) # Convert set to list for JSON serialization
+    }
+    
+    # Write the unique wallets data to disk
+    with open(unique_file_name, "w", encoding="utf-8") as f:
+        json.dump(unique_data, f, indent=2, ensure_ascii=False)
+    
+    # Output confirmation messages for logging/debugging
+    print(f"Unique wallets saved to '{unique_file_name}'")
+    print(f"{len(unique_wallets)} unique wallets extracted")
+
+
