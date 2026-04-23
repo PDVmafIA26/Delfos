@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import os
+from kafka_manager import get_producer
 
 # File name for caching category tag IDs
 TAGS_FILE = "categories_tags.json"
@@ -163,6 +164,16 @@ def get_markets_info(session, tag_slug, ids_categories_exclude, generate_json=Fa
                         if token in fetched_order_books:
                             market["order_books"][token] = fetched_order_books[token]
 
+            # Once the event information is complete, it is sent to Kafka.
+            event_id = str(event.get("id", ""))
+            try:
+                get_producer().send_data(
+                    topic="events", 
+                    data=event, 
+                    key=event_id if event_id else None
+                )
+            except Exception as e:
+                print(f"Error sending event '{event_id}' to Kafka: {e}")
     print(f"[✓] Extraction complete for '{tag_slug}'. Total markets mapped: {len(market_tokens_mapping)}\n")
 
     if generate_json:
