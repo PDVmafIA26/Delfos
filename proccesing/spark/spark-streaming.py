@@ -185,7 +185,6 @@ def detect_price_anomalies(batch_df):
 
         # 3. Guardar anomalía
         if is_anomaly:
-            change = None
             payload = {
                 "change": change,
                 "actual_price": float(current_price),
@@ -195,15 +194,13 @@ def detect_price_anomalies(batch_df):
             
             cursor.execute("""
                 INSERT INTO anomalies (
-                    alert_id,
                     category,
                     sub_type,
                     payload,
                     created_at
                 )
-                VALUES (%s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s)
             """, (
-                str(uuid.uuid4()),
                 "MARKET",
                 "PRICE_CROSS_0_5",
                 json.dumps(payload),
