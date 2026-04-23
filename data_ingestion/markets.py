@@ -97,7 +97,7 @@ def get_markets_info(session, tag_slug, ids_categories_exclude, generate_json=Fa
 
             for event in events:
                 for market in event.get("markets", []):
-                    market_id = market.get("id")
+                    market_id = market.get("conditionId")
                     is_closed = market.get("closed", False)
                     
                     if market_id:
@@ -143,21 +143,19 @@ def get_markets_info(session, tag_slug, ids_categories_exclude, generate_json=Fa
             print(f"\n[X] Critical HTTP request error: {e}")
             break
 
+    # PHASE 2: Fetch Order Books concurrently to bypass the sequential bottleneck
+    print(f"\n[*] Fetching {len(tokens_to_fetch)} order books concurrently for '{tag_slug}'...")
+    fetched_order_books = {}
     
+    # 50 workers provide a significant speedup while safely respecting the 150 req/sec API limit
+    with ThreadPoolExecutor(max_workers=50) as executor:
+        futures = {executor.submit(get_order_book, session, token): token for token in tokens_to_fetch}
+        for future in as_completed(futures):
+            token, ob_data = future.result()
+            fetched_order_books[token] = ob_data
 
     # PHASE 3: Re-inject the successfully fetched order books back into their parent market JSON objects
     if generate_json:
-        # PHASE 2: Fetch Order Books concurrently to bypass the sequential bottleneck
-        print(f"\n[*] Fetching {len(tokens_to_fetch)} order books concurrently for '{tag_slug}'...")
-        fetched_order_books = {}
-        
-        # 50 workers provide a significant speedup while safely respecting the 150 req/sec API limit
-        with ThreadPoolExecutor(max_workers=50) as executor:
-            futures = {executor.submit(get_order_book, session, token): token for token in tokens_to_fetch}
-            for future in as_completed(futures):
-                token, ob_data = future.result()
-                fetched_order_books[token] = ob_data
-                
         for event in all_api_events:
             for market in event.get("markets", []):
                 if not market.get("closed", False):
@@ -199,6 +197,56 @@ def read_tag_file():
         data = json.load(f)
         # Return the categories mapping, or an empty dict if the file structure is unexpected
         return data
+
+def create_json_output(file_name, data):
+    """
+    From the data obtained from the API, create a JSON file with a timestamp
+    """
+    now = datetime.now(timezone.utc)
+    
+    timestamp_str = now.strftime("%Y-%m-%d_%H-%M-%S")
+
+    output_filename =  timestamp_str + file_name + ".json"
+
+    print(f"\n--- Saving all data to {output_filename} ---")
+    
+    final_output = {
+        "ingestion_timestamp": datetime.now(timezone.utc).isoformat(),
+        "events": data
+    }
+
+    with open(output_filename, "w", encoding="utf-8") as f:
+        json.dump(final_output, f, indent=4, ensure_ascii=False)
+
+def obtain_event_data(http_session, category_tag):
+    """
+    From an existing session, check if the tag file exists and obtain information about the events and markets for a category.
+    """
+    if not os.path.exists(TAGS_FILE):
+        create_tag_file(http_session, category_tag)
+
+    categories = read_tag_file()
+
+    ids_categories_exclude = []
+    all_collected_events = []
+    total_market_mapping = {}
+
+    for category in category_tag:
+        mapping, events_json = get_markets_info(
+            session=http_session,
+            tag_slug=category, 
+            ids_categories_exclude=ids_categories_exclude, 
+            generate_json=True
+        )
+        
+        total_market_mapping.update(mapping)
+        all_collected_events.extend(events_json)
+
+        # Append the current category ID to the exclusion list to prevent data duplication in subsequent iterations
+        if categories[category]:
+            ids_categories_exclude.append(categories[category])
+    
+    return total_market_mapping, all_collected_events
 
 
 # ==========================================
