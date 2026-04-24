@@ -53,8 +53,12 @@ def on_message(ws, message):
                         topic="websockets",
                         data=data,
                         key=str(market_id) if market_id else None,
+                        headers=[
+                            ("event_type", event_type),
+                        ],
                     )
-                    logger.info(f"Message sent to Kafka")
+                logger.info(f"Message sent to Kafka")
+
             except Exception as e:
                 logger.error(f"Error sending message to Kafka: {e}")
 
@@ -100,10 +104,10 @@ def run_websocket(assets_ids, stop_event: threading.Event = None):
 
         # Store ws reference so it can be closed externally
         stop_event.ws = ws
-        
+
         # Ping-Pong keepalive required by Polymarket
         ws.run_forever(ping_interval=10, ping_timeout=5)
-        
+
         if stop_event and stop_event.is_set():
             break
 

@@ -17,57 +17,67 @@ class KafkaManager:
         }
         try:
             self.producer = Producer(self.config)
-            print("Conectado al Broker de Kafka")
+            print("Successfully connected to Kafka broker.")
         except Exception as e:
-            print(f"Error al conectar con Kafka: {e}")
+            print(f"Failed to connect to Kafka broker at '{broker}': {e}")
             raise
 
     def _delivery_report(self, err, msg):
-        """Callback ejecutado tras cada envío exitoso o fallido."""
+        """Callback invoked after each message is sent, whether successful or not."""
         if err is not None:
-            print(f"Error al entregar mensaje al topic {msg.topic()}: {err}")
+            print(f"Failed to deliver message to topic '{msg.topic()}': {err}")
         # else:
-        #     print(f"Mensaje entregado → {msg.topic()} [partición {msg.partition()}]")
+        #     logger.debug(f"Message delivered to '{msg.topic()}' [partition {msg.partition()}]")
 
     def send_data(
-        self, topic: str, data: dict[str, Any], key: str | None = None
+        self,
+        topic: str,
+        data: dict[str, Any],
+        key: str | None = None,
+        headers: list[tuple] | None = None,
     ) -> None:
         """
-        Método general para enviar info a Kafka de forma sencilla.
-        :param topic: Nombre del topic (events, websockets, etc.)
-        :param data: Diccionario con la info (JSON)
-        :param key: (Opcional) ID del mercado para asegurar el orden cronológico
+        Serializes and sends a data dictionary to the specified Kafka topic.
+        :param topic: Target topic name (e.g. 'top_wallets', 'websockets')
+        :param data: Dictionary to serialize and send as JSON
+        :param key: Optional market ID to ensure chronological ordering within a partition
+        :param headers: Optional metadata headers as a list of (key, value) tuples
         """
         try:
-            # 1. Serialización del diccionario a bytes
+            # Serialize dictionary to bytes
             payload = json.dumps(data).encode("utf-8")
 
-            # 2. Enviar el mensaje (produce es asíncrono y ultra rápido)
+            # Produce is asynchronous — delivery is confirmed via _delivery_report callback
             self.producer.produce(
                 topic=topic,
                 key=(
                     str(key) if key else None
-                ),  # Si hay llave, se usa; si no, va a partición aleatoria
+                ),  # If no key, message goes to a random partition
                 value=payload,
                 callback=self._delivery_report,
+                headers=headers or [],
             )
 
-            # 3. Empujar los mensajes a la red en segundo plano
+            # Trigger delivery callbacks without blocking
             self.producer.poll(0)
 
         except Exception as e:
-            print(f"Fallo interno al preparar el envío al topic {topic}: {e}")
+           print(f"Failed to produce message to topic '{topic}': {e}")
 
     def flush(self):
-        """Asegura que todo se envíe antes de que el script principal termine."""
+        """Blocks until all pending messages have been delivered to Kafka."""
         self.producer.flush()
 
 
-_producer = None
-
+_producer: KafkaManager | None = None
 
 def get_producer() -> KafkaManager:
+    """Returns the singleton KafkaManager instance, creating it if necessary."""
     global _producer
     if _producer is None:
-        _producer = KafkaManager()
+        try:
+            _producer = KafkaManager()
+        except Exception as e:
+            print(f"Kafka is unavailable. The ingestion pipeline cannot start: {e}")
+            raise
     return _producer
