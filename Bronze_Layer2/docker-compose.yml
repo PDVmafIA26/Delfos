@@ -22,7 +22,7 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     restart: always
 
-  # CAPA BRONCE Y PLATA (NoSQL)
+  # CAPA BRONCE (NoSQL)
   mongodb:
     image: mongo:latest
     container_name: mongodb
