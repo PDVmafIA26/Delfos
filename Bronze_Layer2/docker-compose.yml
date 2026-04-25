@@ -22,7 +22,7 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     restart: always
 
-  # NUEVA BASE DE DATOS
+  # CAPA BRONCE Y PLATA (NoSQL)
   mongodb:
     image: mongo:latest
     container_name: mongodb
@@ -32,9 +32,8 @@ services:
       - MONGO_INITDB_ROOT_USERNAME=admin
       - MONGO_INITDB_ROOT_PASSWORD=administrador
     volumes:
-      - ./datos_mongo:/data/db
+      - ../datos_mongo:/data/db
 
-  # Panel de control visual para MongoDB (Puerto 8081)
   mongo-express:
     image: mongo-express
     container_name: mongo-express
@@ -47,12 +46,46 @@ services:
       - ME_CONFIG_MONGODB_ADMINPASSWORD=administrador
       - ME_CONFIG_MONGODB_URL=mongodb://admin:administrador@mongodb:27017/
 
-  bronze-bridge:
-    build: .
-    container_name: bronze-bridge
-    depends_on:
-      - kafka
-      - mongodb
+  # CAPA ORO (Relacional)
+  postgres_gold:
+    image: postgres:15
+    container_name: postgres_gold
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=administrador
+      - POSTGRES_DB=capa_oro
+    ports:
+      - "5432:5432"
     volumes:
-      - ./scripts:/app
-    restart: always
+      - ../datos_postgres:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin_gold
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@admin.com
+      - PGADMIN_DEFAULT_PASSWORD=administrador
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres_gold
+  
+  # actúa como el Broker
+  redis_broker:
+    image: redis:latest
+    container_name: redis_broker
+    ports:
+      - "6379:6379"
+
+  # nterfaz web para ver el estado de las tareas
+  flower:
+    image: mher/flower
+    container_name: flower_monitor
+    ports:
+      - "5555:5555"
+    environment:
+      - CELERY_BROKER_URL=redis://redis_broker:6379/0
+    depends_on:
+      - redis_broker
+
