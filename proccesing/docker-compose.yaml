@@ -1,50 +1,39 @@
 services:
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.5.0
-    container_name: zookeeper
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-
   kafka:
-    image: confluentinc/cp-kafka:7.5.0
-    container_name: kafka
-    depends_on:
-      - zookeeper
+    # Official Apache Kafka image (KRaft mode — no Zookeeper needed)
+    image: apache/kafka:3.7.0
+    container_name: kafka-local
     ports:
       - "9092:9092"
-      - "29092:29092"
     environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29092
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
 
-  init-kafka:
-    image: confluentinc/cp-kafka:7.5.0
-    container_name: init-kafka
+      # Two listeners: internal (29092) for inter-container comms, external (9092) for host access
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,CONTROLLER://0.0.0.0:9093,EXTERNAL://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,EXTERNAL://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+
+      # Replication factor set to 1 — single node, not suitable for production
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+
+  kafka-ui:
+    # Web UI for inspecting topics, messages and consumer groups
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    ports:
+      - "8082:8080"
     depends_on:
       - kafka
-    entrypoint: [ '/bin/sh', '-c' ]
-    command: |
-      "
-      # Wait for the Kafka broker to be available before creating topics
-      echo 'Waiting for Kafka broker to be available...'
-      until kafka-topics --bootstrap-server kafka:9092 --list > /dev/null 2>&1; do
-        echo 'Kafka is not responding yet... retrying in 2 seconds'
-        sleep 2
-      done
-
-      # Create the required topic if it does not already exist
-      echo 'Kafka is online. Creating topic: tech_markets...'
-      kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic tech_markets --partitions 1 --replication-factor 1
-      
-      echo 'Topic creation successful. Current topic list:'
-      kafka-topics --bootstrap-server kafka:9092 --list
-      "
+    environment:
+      KAFKA_CLUSTERS_0_NAME: Local
+      # Uses internal listener — kafka-ui and kafka share the same Docker network
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
 
   # NUEVA BASE DE DATOS
   mongodb:
@@ -70,16 +59,6 @@ services:
       - ME_CONFIG_MONGODB_ADMINUSERNAME=admin
       - ME_CONFIG_MONGODB_ADMINPASSWORD=administrador
       - ME_CONFIG_MONGODB_URL=mongodb://admin:administrador@mongodb:27017/
-
-  bronze-bridge:
-    build: .
-    container_name: bronze-bridge
-    depends_on:
-      - kafka
-      - mongodb
-    volumes:
-      - ./scripts:/app
-    restart: always
   
   spark-master:
     image: apache/spark:3.5.1
@@ -105,15 +84,35 @@ services:
       - kafka
       - spark-master
     volumes:
-      - ./spark:/app
+      - ./proccesing/spark:/app
     environment:
       - HOME=/tmp
     command: >
+      bash -c "pip install psycopg2-binary &&
       /opt/spark/bin/spark-submit
       --conf spark.jars.ivy=/tmp/.ivy2
       --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1,org.postgresql:postgresql:42.7.3
       --master spark://spark-master:7077
-      /app/spark-streaming.py
+      /app/spark-streaming.py"
+  spark-streaming-price-changes:
+    image: apache/spark:3.5.1
+    container_name: spark-price-changes
+    depends_on:
+      - kafka
+      - spark-master
+      - postgres
+    volumes:
+      - ./proccesing/spark:/app
+    environment:
+      - HOME=/tmp
+    command: >
+      bash -c "
+      /opt/spark/bin/spark-submit
+      --conf spark.jars.ivy=/tmp/.ivy2
+      --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1,org.postgresql:postgresql:42.7.3
+      --master spark://spark-master:7077
+      /app/spark-streaming-price-changes.py
+      "
 
   spark-batch:
     image: apache/spark:3.5.1
@@ -123,7 +122,7 @@ services:
       - postgres
       - mongodb
     volumes:
-      - ./spark:/app
+      - ./proccesing/spark:/app
     environment:
       - HOME=/tmp
     command: >
@@ -143,4 +142,4 @@ services:
     ports:
       - "5432:5432"
     volumes:
-    - ./init-db:/docker-entrypoint-initdb.d
+    - ./proccesing/init-db:/docker-entrypoint-initdb.d

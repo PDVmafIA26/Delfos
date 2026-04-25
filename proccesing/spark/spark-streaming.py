@@ -80,31 +80,25 @@ def write_to_postgres(batch_df, batch_id):
     for row in batch_df.collect():
 
         cursor.execute("""
-            INSERT INTO market_stream (
+            INSERT INTO MERCADOS_MASTER (
                 market_id,
                 question,
-                description,
-                volume,
-                liquidity,
-                price,
-                timestamp
+                total_volume_usd,
+                liquidity
             )
-            VALUES (%s,%s,%s,%s,%s,%s,%s)
+            VALUES (%s,%s,%s,%s)
             ON CONFLICT (market_id)
             DO UPDATE SET
                 volume = EXCLUDED.volume,
-                liquidity = EXCLUDED.liquidity,
-                price = EXCLUDED.price,
-                timestamp = EXCLUDED.timestamp
+                liquidity = EXCLUDED.liquidity
         """, (
             row.market_id,
             row.question,
-            row.description,
             row.volume,
-            row.liquidity,
-            row.price,
-            row.timestamp
+            row.liquidity
         ))
+
+        # Faltaría hacer el insert de los tokens y revisar este último insert
 
     conn.commit()
     cursor.close()
