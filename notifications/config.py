@@ -11,10 +11,16 @@ except ImportError:
     pass
 
 # Telegram Bot API configuration
-BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "undefined_token")
-BASE_URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
+BOT_TOKEN_TELEGRAM = os.getenv("TELEGRAM_BOT_TOKEN", "undefined_token")
+BASE_URL_TELEGRAM = f"https://api.telegram.org/bot{BOT_TOKEN_TELEGRAM}"
 
-CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "undefined_chat_id")
+
+
+CHAT_ID_TELEGRAM = os.getenv("TELEGRAM_CHAT_ID", "undefined_chat_id")
+
+# Discord Bot API configuration
+BOT_TOKEN_DISCORD     = os.getenv("DISCORD_TOKEN")
+CHANNEL_ID_DISCORD  = int(os.getenv("DISCORD_CANAL_ID"))
 
 DEFAULT_IMAGE = "assets/politics.jpg"
 
