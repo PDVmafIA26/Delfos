@@ -18,7 +18,6 @@ def send_notification(notification: Notification) -> dict:
     image = (BASE_DIR / image_path).resolve()
 
     with open(image, "rb") as img:
-        # Discord espera la imagen en 'file' y el texto en 'content'
         resp = niquests.post(
             BASE_URL_DISCORD,
             data={
@@ -36,5 +35,4 @@ def send_notification(notification: Notification) -> dict:
     if resp.status_code == 204:
         return {"status": "success", "message": "Enviado a Discord correctamente"}
     
-    # Por si le añades ?wait=true a la URL del webhook (que sí devuelve un JSON)
     return resp.json() if resp.text else {"status": "unknown"}
