@@ -3,19 +3,20 @@ from pyspark.sql.functions import col, from_json, explode, expr
 from pyspark.sql.types import *
 
 spark = SparkSession.builder \
-    .appName("polymarket-stream") \
+    .appName("polymarket-stream-flip") \
     .getOrCreate()
 
 # Schema
-price_change_schema = StructType([
-    StructField("asset_id", StringType()),
-    StructField("price", StringType())
-])
-
 schema = StructType([
     StructField("market", StringType()),
-    StructField("price_changes", ArrayType(price_change_schema)),
-    StructField("timestamp", StringType())
+    StructField("asset_id", StringType()),
+    StructField("price", StringType()),
+    StructField("size", StringType()),
+    StructField("fee_rate_bps", StringType()),
+    StructField("side", StringType()),
+    StructField("timestamp", StringType()),
+    StructField("event_type", StringType()),
+    StructField("transaction_hash", StringType())
 ])
 
 # Read Kafka
@@ -27,7 +28,7 @@ df = spark.readStream \
 
 # Filtrar header
 filtered = df.filter(
-    expr("exists(headers, x -> x.key = 'event_type' AND cast(x.value as string) = 'price_change')")
+    expr("exists(headers, x -> x.key = 'event_type' AND cast(x.value as string) = 'last_trade_price')")
 )
 
 # Parse JSON
@@ -37,13 +38,13 @@ parsed = filtered.select(
 
 # Flatten
 flat = parsed.select(
-    explode(col("data.price_changes")).alias("pc"),
+    col("data.asset_id").alias("asset_id"),
+    col("data.price").cast("float").alias("price"),
     col("data.timestamp").cast("long").alias("ts")
-).select(
-    col("pc.asset_id"),
-    col("pc.price").cast("float").alias("price"),
-    col("ts")
 )
+
+# Eliminamos posibles duplicados
+flat = flat.dropDuplicates(["asset_id", "ts"])
 
 # Crear tabla temporal para los precios de los tokens
 # CREATE TABLE outcome_tokens_updates (
