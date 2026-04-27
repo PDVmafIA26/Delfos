@@ -20,7 +20,7 @@ class NotifyRequest(BaseModel):
 def notify(request: NotifyRequest):
     try:
         response = send_notification_telegram(request)
-        print(f"Notificación de Discord enviada: {response.get('ok')}")
+        print(f"Notificación de Telegram enviada: {response.get('ok')}")
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
     
