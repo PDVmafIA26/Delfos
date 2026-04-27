@@ -2,11 +2,11 @@ from typing import Optional
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from telegrambot import send_notification as send_notification_telegram
-# from discordbot import on_ready as send_notification_discord
+from discordbot import send_notification as send_notification_discord
 
 app = FastAPI(
-    title="Delfos Telegram bot API",
-    description="Delfos Telegram bot sends notifications to Telegram based on predefined templates.",
+    title="Delfos bot API",
+    description="Delfos bot sends notifications to Telegram and Discord based on predefined templates.",
     version="1.0.0",
 )
 
@@ -24,8 +24,9 @@ def notify(request: NotifyRequest):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
     
-    # try:
-    #     response = await send_notification_discord()
-    #     print(f"Notificación de Discord enviada: {response.get('ok')}")
-    # except Exception as e:
-    #     raise HTTPException(status_code=400, detail=str(e))
+    try:
+        response = send_notification_discord(request)
+        print(f"Notificación de Discord enviada: {response.get('ok')}")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    

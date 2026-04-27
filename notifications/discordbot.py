@@ -1,48 +1,40 @@
-import discord
-import json
-import os
-from config import BOT_TOKEN_DISCORD, CHANNEL_ID_DISCORD
+import niquests
+from config import BASE_URL_DISCORD, BASE_DIR, DEFAULT_IMAGE
+from dataclasses import dataclass
+from typing import Optional
 
-# ── Cliente ───────────────────────────────────────────
-intents = discord.Intents.default()
-bot = discord.Client(intents=intents)
 
-# ── Funciones ─────────────────────────────────────────
-def leer_json(path: str) -> dict:
-    with open(path, "r", encoding="utf-8") as f:
-        return json.load(f)
+@dataclass
+class Notification:
+    text: str
+    image_path: Optional[str] = None
+    # If image_path exists, it is the path to the image to send with the text. Otherwise, only text is sent.
 
-def construir_embed(data: dict):
-    topic = data.get("topic", "general")
-    info  = data.get("data", {})
 
-    embed = discord.Embed(
-        title       = info.get("title", "Sin título"),
-        description = info.get("summary", ""),
-    )
-    embed.add_field(name="📋 Detalles", value=info.get("details", "N/A"), inline=False)
-    embed.set_footer(text=f"Categoría: {topic.capitalize()}")
+def send_notification(notification: Notification) -> dict:
+    """Sends text + image based on the Notification to a Discord Webhook."""
 
-    return embed, info.get("image")
+    image_path = notification.image_path or DEFAULT_IMAGE
+    image = (BASE_DIR / image_path).resolve()
 
-# ── Eventos ───────────────────────────────────────────
-@bot.event
-async def on_ready():
-    print(f"✅ Bot conectado como {bot.user}")
-
-    channel = bot.get_channel(CHANNEL_ID_DISCORD)
-    if not channel:
-        print(f"❌ Canal {CHANNEL_ID_DISCORD} no encontrado")
-        return
-
-    data = leer_json("example-request-body.json")
-    embed, imagen_path = construir_embed(data)
-
-    if imagen_path and os.path.exists(imagen_path):
-        archivo = discord.File(imagen_path, filename="image.jpg")
-        embed.set_image(url="attachment://image.jpg")
-        await channel.send(embed=embed, file=archivo)
-    else:
-        await channel.send(embed=embed)
-
-bot.run(BOT_TOKEN_DISCORD)
+    with open(image, "rb") as img:
+        # Discord espera la imagen en 'file' y el texto en 'content'
+        resp = niquests.post(
+            BASE_URL_DISCORD,
+            data={
+                "content": notification.text, 
+            },
+            files={
+                "file": img 
+            },
+            timeout=20,
+        )
+    
+    resp.raise_for_status()
+    
+    # Discord devuelve 204 No Content por defecto si todo va bien.
+    if resp.status_code == 204:
+        return {"status": "success", "message": "Enviado a Discord correctamente"}
+    
+    # Por si le añades ?wait=true a la URL del webhook (que sí devuelve un JSON)
+    return resp.json() if resp.text else {"status": "unknown"}
