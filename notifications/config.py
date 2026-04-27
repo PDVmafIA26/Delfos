@@ -20,7 +20,10 @@ CHAT_ID_TELEGRAM = os.getenv("TELEGRAM_CHAT_ID", "undefined_chat_id")
 
 # Discord Bot API configuration
 BOT_TOKEN_DISCORD     = os.getenv("DISCORD_TOKEN")
-CHANNEL_ID_DISCORD  = int(os.getenv("DISCORD_CANAL_ID"))
+CHANNEL_ID_DISCORD  = int(os.getenv("DISCORD_CHAT_ID"))
+
+BASE_URL_DISCORD = os.getenv("DISCORD_URL_WEBHOOK", "undefined_url")
+
 
 DEFAULT_IMAGE = "assets/politics.jpg"
 
