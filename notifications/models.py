@@ -25,4 +25,4 @@ class Notification(BaseModel):
 
 
 # Add here the rest of the anomaly models:
-AnomalyType = FlipAnomaly  # AnomalyType = Union[FlipAnomaly, SpikeAnomaly, etc.]
+Anomaly = FlipAnomaly  # AnomalyType = Union[FlipAnomaly, SpikeAnomaly, etc.]

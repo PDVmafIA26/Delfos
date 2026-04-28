@@ -1,6 +1,6 @@
 import niquests
 from config import BASE_URL_DISCORD, BASE_DIR, DEFAULT_IMAGE
-from notifications.models import Notification
+from models import Notification
 
 
 def send_notification(notification: Notification) -> dict:

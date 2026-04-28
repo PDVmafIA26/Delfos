@@ -10,18 +10,15 @@ except ImportError:
     # In production, we expect environment variables to be set directly, so we can ignore the absence of dotenv.
     pass
 
+# Polimarket configuration
+POLIMARKET_BASE_URL = "https://polymarket.com"
+
 # Telegram Bot API configuration
 BOT_TOKEN_TELEGRAM = os.getenv("TELEGRAM_BOT_TOKEN", "undefined_token")
 BASE_URL_TELEGRAM = f"https://api.telegram.org/bot{BOT_TOKEN_TELEGRAM}"
-
-
-
 CHAT_ID_TELEGRAM = os.getenv("TELEGRAM_CHAT_ID", "undefined_chat_id")
 
-# Discord Bot API configuration
-BOT_TOKEN_DISCORD     = os.getenv("DISCORD_TOKEN")
-CHANNEL_ID_DISCORD  = int(os.getenv("DISCORD_CHAT_ID"))
-
+# Discord Webhook configuration
 BASE_URL_DISCORD = os.getenv("DISCORD_URL_WEBHOOK", "undefined_url")
 
 

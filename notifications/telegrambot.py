@@ -1,6 +1,6 @@
 import niquests
 from config import BASE_URL_TELEGRAM, CHAT_ID_TELEGRAM, BASE_DIR, DEFAULT_IMAGE
-from notifications.models import Notification
+from models import Notification
 
 
 def send_notification(
@@ -8,6 +8,7 @@ def send_notification(
 ) -> dict:
     """Sends text + image based on the Notification to a given Telegram chat."""
 
+    text = notification.text.replace("_", "\\_")  # Escape underscores for Markdown
     image_path = notification.image_path or DEFAULT_IMAGE
     image = (BASE_DIR / image_path).resolve()
 
@@ -16,7 +17,7 @@ def send_notification(
             f"{BASE_URL_TELEGRAM}/sendPhoto",
             data={
                 "chat_id": chat_id,
-                "caption": notification.text,
+                "caption": text,
                 "parse_mode": "Markdown",
             },
             files={"photo": img},

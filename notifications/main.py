@@ -1,6 +1,6 @@
-from typing import Optional
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from models import Anomaly, Notification
+from reporting import get_notification_message
 from telegrambot import send_notification as send_notification_telegram
 from discordbot import send_notification as send_notification_discord
 
@@ -11,22 +11,18 @@ app = FastAPI(
 )
 
 
-class NotifyRequest(BaseModel):
-    text: str
-    image_path: Optional[str] = None
-
-
 @app.post("/notify")
-def notify(request: NotifyRequest):
+def notify(request: Anomaly):
+    notification_message: Notification = get_notification_message(request)
+    print(f"Notificación generada: {notification_message}")
     try:
-        response = send_notification_telegram(request)
+        response = send_notification_telegram(notification_message)
         print(f"Notificación de Telegram enviada: {response.get('ok')}")
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
-    
+
     try:
-        response = send_notification_discord(request)
+        response = send_notification_discord(notification_message)
         print(f"Notificación de Discord enviada: {response.get('ok')}")
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
-    
