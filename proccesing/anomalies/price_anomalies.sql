@@ -66,7 +66,7 @@ INSERT INTO alertas_anomalias (
 )
 SELECT
     'MARKET',
-    'PRICE_CROSS_0_5',
+    'FLIP',
     jsonb_build_object(
         'market_id', market_id,
         'question', question_title,
