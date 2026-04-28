@@ -1,4 +1,11 @@
 {
-  "text": "prueba",
-  "image_path": "assets/politics.jpg"
+  "alert_id": "string",
+  "sub_type": "FLIP",
+  "payload": {
+    "question": "Aquí va 'question', que incluye EVENTO y MERCADO",
+    "change": "NO_TO_YES",
+    "actual_price": 0,
+    "slug": "aqui_va_el_slug_con_barras_bajas"
+  },
+  "timestamp": "2026-04-28T00:53:33.389Z"
 }
