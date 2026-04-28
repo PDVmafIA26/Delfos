@@ -20,9 +20,4 @@ def send_notification(notification: Notification) -> dict:
         )
 
     resp.raise_for_status()
-
-    # Discord devuelve 204 No Content por defecto si todo va bien.
-    if resp.status_code == 204:
-        return {"status": "success", "message": "Enviado a Discord correctamente"}
-
-    return resp.json() if resp.text else {"status": "unknown"}
+    return resp.json()
