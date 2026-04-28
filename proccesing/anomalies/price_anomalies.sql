@@ -38,6 +38,7 @@ cross_events AS (
 deduplicated AS (
     SELECT DISTINCT ON (t.market_id, time_bucket)
         t.market_id,
+        m.question_title,
         t.outcome_name,
         c.asset_id,
         c.price AS current_price,
@@ -47,6 +48,8 @@ deduplicated AS (
     FROM cross_events c
     JOIN outcome_tokens t
         ON t.id_token = c.asset_id
+    JOIN mercados_master m
+        ON m.market_id = t.market_id
     CROSS JOIN LATERAL (
         SELECT FLOOR(c.ts / 5) AS time_bucket /*Esto es por si cambia de SI a NO y luego un minuto más tarde cambia de NO a SI*/
     ) tb
@@ -66,10 +69,10 @@ SELECT
     'PRICE_CROSS_0_5',
     jsonb_build_object(
         'market_id', market_id,
-        'asset_id', asset_id,
+        'question', question_title,
         'outcome_name', outcome_name,
         'previous_price', prev_price,
-        'current_price', current_price,
+        'actual_price', current_price,
         'change', change,
         'event_timestamp', event_timestamp
     ),
