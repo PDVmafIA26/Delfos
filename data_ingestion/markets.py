@@ -64,8 +64,8 @@ def get_order_book(session, token_id, max_retries=3):
             if response.status_code == 404:
                 return token_id, empty_book
                 
-            # 3. Rate Limit: Wait (1s, 2s, 4s...) and retry
-            if response.status_code == 429:
+            # 3. Rate Limit (429) and other network errors: Wait (1s, 2s, 4s...) and retry
+            if response.status_code in [408, 429, 500, 502, 503, 504]:
                 time.sleep(2 ** attempt)
                 continue
                 
@@ -82,7 +82,7 @@ def get_order_book(session, token_id, max_retries=3):
     print(f"[!] Retries exhausted for token {token_id}.")
     return token_id, empty_book
 
-def get_markets_info(session, tag_slug, ids_categories_exclude, generate_json=False):
+def get_markets_info(session, tag_slug, ids_categories_exclude, generate_json=True):
     """
     Fetches event and market data from the Polymarket Gamma API using pagination,
     then concurrently fetches the associated order books for open markets.
@@ -168,12 +168,12 @@ def get_markets_info(session, tag_slug, ids_categories_exclude, generate_json=Fa
     print(f"\n[*] Fetching {len(tokens_to_fetch)} order books concurrently for '{tag_slug}'...")
     fetched_order_books = {}
     
-    # 50 workers provide a significant speedup while safely respecting the 150 req/sec API limit
-    with ThreadPoolExecutor(max_workers=10) as executor:
-        futures = {executor.submit(get_order_book, session, token): token for token in tokens_to_fetch}
-        for future in as_completed(futures):
-            token, ob_data = future.result()
-            fetched_order_books[token] = ob_data
+    # # 50 workers provide a significant speedup while safely respecting the 150 req/sec API limit
+    # with ThreadPoolExecutor(max_workers=10) as executor:
+    #     futures = {executor.submit(get_order_book, session, token): token for token in tokens_to_fetch}
+    #     for future in as_completed(futures):
+    #         token, ob_data = future.result()
+    #         fetched_order_books[token] = ob_data
 
     # PHASE 3: Re-inject the successfully fetched order books back into their parent market JSON objects
     if generate_json:

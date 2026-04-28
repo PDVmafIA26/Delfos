@@ -16,7 +16,7 @@ def _process_single_market(session, condition_id):
     url = "https://data-api.polymarket.com/holders"
     params = {
         "market": condition_id,
-        "limit": 20,
+        "limit": 5,
     }
 
     max_retries = 3
@@ -89,7 +89,7 @@ def _process_single_market(session, condition_id):
 
 
 
-def run_top_wallets_ingestion(session, condition_ids, max_workers = 9):
+def run_top_wallets_ingestion(session, condition_ids, max_workers = 11):
     """
     Orchestrates the concurrent ingestion of top wallet holders for all given markets.
     Fetches data in parallel using a ThreadPoolExecutor, sends each market's results
@@ -117,7 +117,7 @@ def run_top_wallets_ingestion(session, condition_ids, max_workers = 9):
     print(f"Top wallets data saved to '{file_name}'")
 
     # Proceed to extract unique wallet addresses
-    extract_unique_wallets(all_wallets)
+    return extract_unique_wallets(all_wallets)
 
 
 
@@ -155,5 +155,7 @@ def extract_unique_wallets(all_markets_top_wallets):
     # Output confirmation messages for logging/debugging
     print(f"Unique wallets saved to '{unique_file_name}'")
     print(f"{len(unique_wallets)} unique wallets extracted")
+
+    return unique_wallets
 
 

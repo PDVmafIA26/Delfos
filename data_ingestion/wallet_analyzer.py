@@ -9,49 +9,74 @@ from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import random
 
 
 class WalletAnalyzer:
     
     def __init__(self):
         self.cache: Dict[str, Dict[str, Any]] = {}
-        self.profile_url = "https://polymarket.com/api/profile/userData"
+        self.profile_url = "https://gamma-api.polymarket.com/public-profile"
         self.history_url = "https://data-api.polymarket.com/closed-positions"
     
     def fetch_profile(self, wallet_address: str) -> Dict[str, Any]:
         """Fetch public profile for a wallet."""
         params = {"address": wallet_address}
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            "Accept": "application/json",
-            "Referer": f"https://polymarket.com/profile/{wallet_address}"
-        }
         
-        try:
-            response = requests.get(self.profile_url, params=params, headers=headers, timeout=10)
-            
-            if response.status_code == 200:
-                data = response.json()
-                return {
-                    "name": data.get("name"),
-                    "profileImage": data.get("profileImage"),
-                    "createdAt": data.get("createdAt"),
-                    "bio": data.get("bio"),
-                    "pseudonym": data.get("pseudonym"),
-                    "verifiedBadge": data.get("verifiedBadge", False),
-                    "userId": data.get("id")
-                }
-        except Exception:
-            pass
+        max_retries = 3
+
+        for attempt in range(max_retries):
+            try:
+                response = requests.get(self.profile_url, params=params, timeout=10)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    return data
+                
+                elif response.status_code == 400:
+                    print(f"[400] Bad Request en {wallet_address}. Check parameters.")
+                    return None
+                
+                # 401 Unauthorized: Auth error, no need to retry
+                elif response.status_code == 401:
+                    print(f"[401] Unauthorized en {wallet_address}. Check API Key or signatures.")
+                    return None
+                
+                # Network/Server temporary errors: Apply exponential backoff and retry
+                elif response.status_code in [408, 429, 500, 502, 503, 504]:
+                    wait = (2 ** attempt) + random.uniform(0, 1)  # Exponential backoff: 1.3s, 2.7s, 1.1s, 4.6s...
+                    if response.status_code == 429:
+                        print(f"[429] Too many requests. THROTTLING wallet {wallet_address} for {wait}s...")
+                    elif response.status_code == 500:
+                        print(f"[500] Internal Server Error. Retrying wallet {wallet_address} in {wait}s...")
+                    else:
+                        print(f"[{response.status_code}] Server Error. Retrying wallet {wallet_address} in {wait}s...")
+                    
+                    time.sleep(wait)
+                    continue # Proceed to the next attempt in the 'for' loop
+
+                # Handle any other undocumented status codes
+                else:
+                    print(f"Unexpected error {response.status_code} for wallet {wallet_address}")
+                    return None
+                
+            except requests.exceptions.RequestException as e:
+                wait = (2 ** attempt) + random.uniform(0, 1)
+                print(f"Connection error for wallet {wallet_address}: {e}. Retrying in {wait}s...")
+                time.sleep(wait)
+            except ValueError:
+                print(f"Error decoding JSON for wallet {wallet_address}")
+                return None
         
-        return {"name": None, "profileImage": None, "createdAt": None}
-    
-    def fetch_history(self, wallet_address: str) -> Dict[str, Any]:
-        # Fetch all closed positions for a wallet using pagination
+        print(f"Max retries reached for wallet {wallet_address} after server failures.")
+        return None
+
+    def fetch_history(self, wallet_address: str, suspect_percentage: float = 0.9) -> tuple[Dict[str, Any], bool]:
+        """Fetch all closed positions for a wallet using pagination and retry logic."""
         all_positions = []
         offset = 0
-        page = 1
         limit_per_page = 100
+        max_retries = 3
         
         # Pagination loop: fetch all positions, not just first page
         while True:
@@ -63,35 +88,80 @@ class WalletAnalyzer:
                 "sortDirection": "DESC"
             }
             
-            try:
-                response = requests.get(self.history_url, params=params, timeout=10)
-                
-                if response.status_code != 200:
-                    break
-                
-                data = response.json()
-                if not data:
-                    break
-                
-                all_positions.extend(data)
-                
-                # If we got fewer than limit, this is the last page
-                if len(data) < limit_per_page:
-                    break
-                
-                offset += limit_per_page
-                page += 1
-                
-            except Exception:
+            page_data = None
+            page_success = False
+            
+            # Retry loop for the current page
+            for attempt in range(max_retries):
+                try:
+                    response = requests.get(self.history_url, params=params, timeout=10)
+                    
+                    if response.status_code == 200:
+                        page_data = response.json()
+                        page_success = True
+                        break  # Success, exit the retry loop
+                    
+                    elif response.status_code == 400:
+                        print(f"[400] Bad Request en {wallet_address} (offset {offset}). Check parameters.")
+                        break  # Fatal error, exit retry loop
+                    
+                    elif response.status_code == 401:
+                        print(f"[401] Unauthorized en {wallet_address}. Check API Key or signatures.")
+                        break  # Fatal error, exit retry loop
+                    
+                    # Network/Server temporary errors: Apply exponential backoff and retry
+                    elif response.status_code in [408, 429, 500, 502, 503, 504]:
+                        wait = (2 ** attempt) + random.uniform(0, 1)
+                        if response.status_code == 429:
+                            print(f"[429] Too many requests. THROTTLING history for {wallet_address} for {wait:.2f}s...")
+                        elif response.status_code == 500:
+                            print(f"[500] Internal Server Error. Retrying history for {wallet_address} in {wait:.2f}s...")
+                        else:
+                            print(f"[{response.status_code}] Server Error. Retrying history for {wallet_address} in {wait:.2f}s...")
+                        
+                        time.sleep(wait)
+                        continue  # Proceed to the next attempt in the 'for' loop
+                    
+                    # Handle any other undocumented status codes
+                    else:
+                        print(f"Unexpected error {response.status_code} fetching history for {wallet_address}")
+                        break
+                        
+                except requests.exceptions.RequestException as e:
+                    wait = (2 ** attempt) + random.uniform(0, 1)
+                    print(f"Connection error for history of {wallet_address}: {e}. Retrying in {wait:.2f}s...")
+                    time.sleep(wait)
+                except ValueError:
+                    print(f"Error decoding JSON for history of wallet {wallet_address}")
+                    break  # Fatal error, exit retry loop
+            
+            # Si el bucle de reintentos terminó sin éxito, detenemos la paginación
+            if not page_success:
+                if attempt == max_retries - 1:
+                    print(f"Max retries reached for history of {wallet_address} at offset {offset}.")
+                break  # Sale del `while True` (paginación)
+            
+            # Si la API no devuelve datos, hemos llegado al final del historial
+            if not page_data:
                 break
+            
+            all_positions.extend(page_data)
+            
+            # Si recibimos menos del límite, esta es la última página
+            if len(page_data) < limit_per_page:
+                break
+            
+            offset += limit_per_page
+        
+        # --- PROCESAMIENTO DE LOS DATOS ---
         
         if not all_positions:
-            return {"total_positions": 0, "summary": {"total_won": 0, "total_lost": 0, "net_pnl": 0}, "positions": []}
+            return {"total_positions": 0, "summary": {"total_won": 0, "total_lost": 0, "net_pnl": 0}, "positions": []}, False
         
-        # Process positions into cleaner format
         processed = []
-        total_won = 0
-        total_lost = 0
+        total_won = 0.0
+        total_lost = 0.0
+        won_count = 0
         
         for pos in all_positions:
             realized_pnl = float(pos.get("realizedPnl", 0))
@@ -99,6 +169,7 @@ class WalletAnalyzer:
             # Determine status based on PnL
             if realized_pnl > 0:
                 total_won += realized_pnl
+                won_count += 1
                 status = "WON"
             elif realized_pnl < 0:
                 total_lost += realized_pnl
@@ -113,15 +184,19 @@ class WalletAnalyzer:
                 "status": status
             })
         
+        win_rate = won_count / len(processed) if len(processed) > 0 else 0
+        suspect = win_rate >= suspect_percentage
+        
         return {
             "total_positions": len(processed),
             "summary": {
                 "total_won": round(total_won, 2),
                 "total_lost": round(abs(total_lost), 2),
-                "net_pnl": round(total_won + total_lost, 2)
+                "net_pnl": round(total_won + total_lost, 2),
+                "win_rate_percentage": round(win_rate * 100, 2)
             },
-            "positions": processed # Store all positions without any limit
-        }
+            "positions": processed
+        }, suspect
     
     def analyze_wallet(self, wallet_address: str) -> Dict[str, Any]:
         # Check cache first
@@ -131,7 +206,7 @@ class WalletAnalyzer:
         print(f"  Analyzing: {wallet_address[:8]}...")
         
         profile = self.fetch_profile(wallet_address)
-        history = self.fetch_history(wallet_address)
+        history, suspect = self.fetch_history(wallet_address)
         
         result = {
             "wallet_address": wallet_address,
