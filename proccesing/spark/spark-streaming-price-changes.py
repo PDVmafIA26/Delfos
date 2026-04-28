@@ -36,6 +36,9 @@ parsed = filtered.select(
     from_json(col("value").cast("string"), schema).alias("data")
 )
 
+# Filter only BUY
+parsed = parsed.filter(col("data.side") == "BUY")
+
 # Flatten
 flat = parsed.select(
     col("data.asset_id").alias("asset_id"),
