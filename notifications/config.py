@@ -1,15 +1,6 @@
 import os
 from pathlib import Path
 
-try:
-    # Development settings: load dotenv to read environment variables from a .env file
-    from dotenv import load_dotenv
-
-    load_dotenv()
-except ImportError:
-    # In production, we expect environment variables to be set directly, so we can ignore the absence of dotenv.
-    pass
-
 # Polimarket configuration
 POLIMARKET_BASE_URL = "https://polymarket.com"
 
