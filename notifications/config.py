@@ -22,7 +22,11 @@ CHAT_ID_TELEGRAM = os.getenv("TELEGRAM_CHAT_ID", "undefined_chat_id")
 BASE_URL_DISCORD = os.getenv("DISCORD_URL_WEBHOOK", "undefined_url")
 
 
-DEFAULT_IMAGE = "assets/politics.jpg"
+DEFAULT_IMAGE_DIR = "assets/default_images"
+DEFAULT_IMAGES = {
+    "FLIP": f"{DEFAULT_IMAGE_DIR}/flip.jpg",  # Flip Anomaly
+    # "WHALE": f"{DEFAULT_IMAGE_DIR}/whale.png", # Whale Movement Anomaly
+}
 
 # Base directory for the project
 BASE_DIR = Path(__file__).resolve().parent

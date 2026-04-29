@@ -1,5 +1,5 @@
 from typing import Callable, Dict
-from config import POLIMARKET_BASE_URL
+from config import POLIMARKET_BASE_URL, DEFAULT_IMAGES
 from models import Anomaly, FlipAnomaly, Notification
 
 
@@ -11,7 +11,7 @@ def format_flip_notification(data: FlipAnomaly) -> Notification:
         f"🔄 Change: {data.payload.change}\n"
         f"🔗 {POLIMARKET_BASE_URL}/event/{data.payload.slug}\n"
     )
-    return Notification(text=text)
+    return Notification(text=text, image_path=DEFAULT_IMAGES.get("FLIP"))
 
 
 HANDLERS: Dict[str, Callable[[Anomaly], Notification]] = {
