@@ -31,7 +31,20 @@
           "total_lost": 0,
           "net_pnl": 0
         },
-        "positions": []
+        "positions": [
+          {
+            "market_title": "Will the government shutdown end November 13?",
+            "outcome": "Yes",
+            "realized_pnl": 14439.09,
+            "status": "WON"
+          },
+          {
+            "market_title": "Will Trump talk to Nicolás Maduro by December 31?",
+            "outcome": "Yes",
+            "realized_pnl": 11406.71,
+            "status": "WON"
+          }
+        ]
       }
     }
     ]
