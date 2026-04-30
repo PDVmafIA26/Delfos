@@ -21,7 +21,7 @@ class FlipAnomaly(BaseModel):
 class Notification(BaseModel):
     text: str
     image_path: Optional[str] = None
-    # If image_path exists, it is the path to the image to send with the text. Otherwise, only text is sent.
+    image_paths: Optional[list[str]] = None
 
 
 # Add here the rest of the anomaly models:

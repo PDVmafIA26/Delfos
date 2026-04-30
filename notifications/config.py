@@ -16,6 +16,7 @@ BASE_URL_DISCORD = os.getenv("DISCORD_URL_WEBHOOK", "undefined_url")
 DEFAULT_IMAGE_DIR = "assets/default_images"
 DEFAULT_IMAGES = {
     "FLIP": f"{DEFAULT_IMAGE_DIR}/flip.jpg",  # Flip Anomaly
+    "prueba": f"{DEFAULT_IMAGE_DIR}/luffy.png",  # Imagen de prueba
     # "WHALE": f"{DEFAULT_IMAGE_DIR}/whale.png", # Whale Movement Anomaly
 }
 
