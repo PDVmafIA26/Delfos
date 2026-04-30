@@ -1,0 +1,38 @@
+{
+  "metadata": {
+    "generated_at": "2026-04-28T20:59:39.330279+00:00",
+    "total_wallets": 18278,
+    "profiles_found": 17472,
+    "successful_fetches": 18278
+  },
+  "wallets": [
+    {
+      "wallet_address": "0xe526433033374d5d662fdee7c7b36e479368a19d",
+      "profile": {
+        "createdAt": "2026-04-26T16:15:12.830845Z",
+        "proxyWallet": "0xe526433033374d5d662fdee7c7b36e479368a19d",
+        "displayUsernamePublic": true,
+        "pseudonym": "Frilly-Grapefruit",
+        "name": "smaykaa",
+        "users": [
+          {
+            "id": "7687697",
+            "creator": false,
+            "mod": false,
+            "communityMod": false
+          }
+        ],
+        "verifiedBadge": false
+      },
+      "trading": {
+        "total_positions": 0,
+        "summary": {
+          "total_won": 0,
+          "total_lost": 0,
+          "net_pnl": 0
+        },
+        "positions": []
+      }
+    }
+    ]
+}
