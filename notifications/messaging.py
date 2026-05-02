@@ -1,9 +1,10 @@
 import niquests
+
 from config import (
+    BASE_DIR,
     BASE_URL_DISCORD,
     BASE_URL_TELEGRAM,
     CHAT_ID_TELEGRAM,
-    BASE_DIR,
     DEFAULT_IMAGES,
 )
 from models import Notification

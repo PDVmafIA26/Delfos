@@ -1,7 +1,8 @@
 from fastapi import FastAPI, HTTPException
+
+from messaging import send_notification_discord, send_notification_telegram
 from models import Anomaly, Notification
 from reporting import get_notification_message
-from messaging import send_notification_telegram, send_notification_discord
 
 app = FastAPI(
     title="Delfos bot API",

@@ -1,5 +1,6 @@
 from typing import Callable, Dict
-from config import POLIMARKET_BASE_URL, DEFAULT_IMAGES
+
+from config import DEFAULT_IMAGES, POLIMARKET_BASE_URL
 from models import Anomaly, FlipAnomaly, Notification
 
 

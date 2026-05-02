@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Literal, Optional  # Union
+
 from pydantic import BaseModel
 
 
