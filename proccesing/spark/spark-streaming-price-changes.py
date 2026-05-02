@@ -26,7 +26,7 @@ df = spark.readStream \
     .option("subscribe", "websocket") \
     .load()
 
-# Filtrar header
+# Filter header
 filtered = df.filter(
     expr("exists(headers, x -> x.key = 'event_type' AND cast(x.value as string) = 'last_trade_price')")
 )
@@ -43,23 +43,14 @@ parsed = parsed.filter(col("data.side") == "BUY")
 flat = parsed.select(
     col("data.asset_id").alias("asset_id"),
     col("data.price").cast("float").alias("price"),
-    col("data.timestamp").cast("long").alias("ts")
+    col("data.size").cast("float").alias("size")
 )
 
-# Eliminamos posibles duplicados
-flat = flat.dropDuplicates(["asset_id", "ts"])
-
-# Crear tabla temporal para los precios de los tokens
-# CREATE TABLE outcome_tokens_updates (
-#     asset_id TEXT,
-#     price FLOAT,
-#     ts BIGINT
-# );
 def write_to_postgres(batch_df, batch_id):
     batch_df.write \
         .format("jdbc") \
         .option("url", "jdbc:postgresql://localhost:5432/markets") \
-        .option("dbtable", "outcome_tokens_updates") \
+        .option("dbtable", "last_trade_price") \
         .option("user", "postgres") \
         .option("password", "postgres") \
         .option("driver", "org.postgresql.Driver") \
