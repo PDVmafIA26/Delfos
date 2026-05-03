@@ -1,17 +1,17 @@
+import time
 from markets import obtain_event_data
 from top_wallets_processor import run_top_wallets_ingestion
 from websocket_ingestor import run_websocket
 import threading
 import requests
 from kafka_manager import get_producer
-from wallet_analyzer import WalletAnalyzer
+from wallet_analyzer import run_wallet_analysis_pipeline
 
 
 def main():
+    start_time = time.time()
 
     CATEGORIES_TAG = ["politics", "geopolitics", "tech", "finance", "economy"]
-    OUTPUT_FILE = "data_ingestion/wallets_complete_data.json"
-    MAX_WORKERS = 5  # Good balance between speed and safety (due to rate limits)
 
     # Configurar sesión HTTP
     http_session = requests.Session()
@@ -39,35 +39,10 @@ def main():
         print(f"    - Total events saved: {len(collected_events)}")
 
         # Fetch top wallets concurrently while WebSocket streams
-        wallet_addresses = run_top_wallets_ingestion(http_session, all_market_ids)
+        wallet_data = run_top_wallets_ingestion(http_session, all_market_ids)
 
-        # Velue can be changed
-
-        print("=" * 60)
-        print("WALLET ANALYZER")
-        print("Fetches profile + trading history for each wallet")
-        print("=" * 60)
-
-        # Analyze all wallets
-        analyzer = WalletAnalyzer()
-        results = analyzer.analyze_multiple_wallets(
-            wallet_addresses, max_workers=MAX_WORKERS
-        )
-
-        # Save combined results
-        analyzer.save_results(results, OUTPUT_FILE)
-
-        # Print summary
-        print("\n" + "-" * 40)
-        print("SUMMARY")
-        print("-" * 40)
-        profiles_found = sum(1 for r in results if r["profile"].get("name"))
-        total_positions = sum(r["trading"].get("total_positions", 0) for r in results)
-        print(f"Total wallets: {len(results)}")
-        print(f"Profiles found: {profiles_found}")
-        print(f"Total positions: {total_positions}")
-        print(f"\nOutput: {OUTPUT_FILE}")
-
+        # Analyze top wallets data
+        wallet_history_data = run_wallet_analysis_pipeline(http_session, wallet_data)
         get_producer().flush()
 
         # Execute WebSocket in a separate thread to avoid blocking
@@ -106,6 +81,12 @@ def main():
         get_producer().flush()
 
         print("Shutdown complete.")
+
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        minutes, seconds = divmod(elapsed_time, 60)
+        
+        print(f"total execution time: {int(minutes)} min y {seconds:.2f} seg")
 
 
 if __name__ == "__main__":
