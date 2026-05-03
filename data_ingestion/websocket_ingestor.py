@@ -14,58 +14,69 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 INTERESTING_EVENT_TYPES = [
-    "price_change",
-    "book",
+    # "price_change",
+    # "book",
     "last_trade_price",
-    "best_bid_ask",
+    # "best_bid_ask",
     "market_resolved",
 ]
 
 
 def on_message(ws, message):
-    logger.info("Message received from Polymarket WebSocket")
     try:
         data = json.loads(message)
-        event_type = data.get("event_type")
-
-        if event_type == "market_resolved":
-            # Unsubscribe from resolved tokens to keep the feed clean
-            resolved_tokens = data.get("assets_ids", [])
-
-            if resolved_tokens:
-                unsubscribe_message = {
-                    "operation": "unsubscribe",
-                    "assets_ids": resolved_tokens,
-                }
-                # Send unsubscribe order to Polymarket through the socket
-                ws.send(json.dumps(unsubscribe_message))
-                logger.info(
-                    f"Automatically unsubscribed from resolved tokens: {resolved_tokens}"
-                )
-
-        # Forward relevant events to Kafka
-        if event_type in INTERESTING_EVENT_TYPES:
-            try:
-                market_id = data.get("market_id")
-                producer = get_producer()
-                if producer:
-                    get_producer().send_data(
-                        topic="websockets",
-                        data=data,
-                        key=str(market_id) if market_id else None,
-                        headers=[
-                            ("event_type", event_type),
-                        ],
-                    )
-                logger.info(f"Message sent to Kafka")
-
-            except Exception as e:
-                logger.error(f"Error sending message to Kafka: {e}")
-
     except json.JSONDecodeError:
         logger.error("Received message is not a valid JSON")
+        return  # Exit early if the JSON is not valid
     except Exception as e:
         logger.error(f"Error processing the message: {e}")
+        return
+
+    event_type = data.get("event_type")
+
+    # Handling unsubscriptions
+    if event_type == "market_resolved":
+        resolved_tokens = data.get("assets_ids", [])
+        if resolved_tokens:
+            ws.send(
+                json.dumps(
+                    {
+                        "operation": "unsubscribe",
+                        "assets_ids": resolved_tokens,
+                    }
+                )
+            )
+            logger.info(
+                f"Automatically unsubscribed from resolved tokens: {resolved_tokens}"
+            )
+
+    # Guard clause: If it's not an interesting event type, exits.
+    if event_type not in INTERESTING_EVENT_TYPES:
+        return
+
+    # Only enters if it's a market resolution, or if it's a last trade price and the side is BUY
+    is_resolved = event_type == "market_resolved"
+    is_buy_trade = event_type == "last_trade_price" and data.get("side") == "BUY"
+
+    if is_resolved or is_buy_trade:
+        try:
+            producer = get_producer()
+
+            if producer:
+                market_id = data.get("market_id")
+
+                producer.send_data(
+                    topic="websockets",
+                    data=data,
+                    key=str(market_id) if market_id else None,
+                    headers=[
+                        ("event_type", event_type),
+                    ],
+                )
+                logger.debug("Message sent to Kafka")
+
+        except Exception as e:
+            logger.error(f"Error sending message to Kafka: {e}")
 
 
 def on_error(ws, error):
