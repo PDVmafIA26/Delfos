@@ -66,33 +66,20 @@ agg = metrics.groupBy("wallet_address").agg(
     count("*").alias("total_positions")
 )
 
-# 6. Suspicious logic
-suspect_percentage = 0.9
-min_positions = 1
-min_profit = 10000
-
 result = agg.withColumn(
     "win_rate",
     when(col("total_positions") > 0,
         col("total_won") / col("total_positions")
     ).otherwise(0)
-).withColumn(
-    "es_sospechoso",
-    (col("win_rate") >= suspect_percentage) &
-    (col("total_positions") >= min_positions) &
-    (col("total_won") >= min_profit)
 ).select(
     col("wallet_address"),
     col("total_won"),
     col("total_lost"),
     col("net_pnl"),
-    col("total_positions").alias("total_position"),
-    col("es_sospechoso")
+    col("total_positions").alias("total_position")
 )
 
-result = result.filter(col("es_sospechoso") == True)
-
-# 7. UPSERT to PostgreSQL
+# 6. UPSERT to PostgreSQL
 def upsert_to_postgres(batch_df, batch_id):
     if batch_df.count() == 0:
         return
@@ -128,18 +115,22 @@ def upsert_to_postgres(batch_df, batch_id):
     # CREATE TABLE usuarios_staging AS TABLE usuarios WITH NO DATA;
     cursor.execute("""
         INSERT INTO usuarios AS t (
-            wallet_address, total_won, total_lost, net_pnl, total_position, es_sospechoso
+            wallet_address, total_won, total_lost, net_pnl, total_position, es_sospechoso, alert_sent
         )
         SELECT 
-            wallet_address, total_won, total_lost, net_pnl, total_position, es_sospechoso
+            wallet_address, total_won, total_lost, net_pnl, total_position, FALSE, FALSE
         FROM usuarios_staging
         ON CONFLICT (wallet_address)
         DO UPDATE SET
-            total_won = EXCLUDED.total_won,
-            total_lost = EXCLUDED.total_lost,
-            net_pnl = EXCLUDED.net_pnl,
-            total_position = EXCLUDED.total_position,
-            es_sospechoso = EXCLUDED.es_sospechoso;
+            total_won = t.total_won + EXCLUDED.total_won,
+            total_lost = t.total_lost + EXCLUDED.total_lost,
+            net_pnl = t.net_pnl + EXCLUDED.net_pnl,
+            total_position = t.total_position + EXCLUDED.total_position,
+            es_sospechoso = (
+        ((t.total_won + EXCLUDED.total_won) / (t.total_position + EXCLUDED.total_position) ) >= 0.9
+        AND (t.total_position + EXCLUDED.total_position) >= 1
+        AND (t.total_won + EXCLUDED.total_won) >= 10000
+    )
     """)
 
     conn.commit()
