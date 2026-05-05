@@ -115,10 +115,10 @@ def upsert_to_postgres(batch_df, batch_id):
     # CREATE TABLE usuarios_staging AS TABLE usuarios WITH NO DATA;
     cursor.execute("""
         INSERT INTO usuarios AS t (
-            wallet_address, total_won, total_lost, net_pnl, total_position, es_sospechoso, alert_sent
+            wallet_address, total_won, total_lost, net_pnl, total_position, es_sospechoso
         )
         SELECT 
-            wallet_address, total_won, total_lost, net_pnl, total_position, FALSE, FALSE
+            wallet_address, total_won, total_lost, net_pnl, total_position, FALSE
         FROM usuarios_staging
         ON CONFLICT (wallet_address)
         DO UPDATE SET
