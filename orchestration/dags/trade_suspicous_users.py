@@ -1,0 +1,34 @@
+from airflow.decorators import dag, task
+import requests
+from airflow.providers.postgres.hooks.postgres import PostgresHook
+from data_ingestion.wallet_current_positions import analyze_multiple_wallets_positions
+import pendulum
+
+@dag(start_date=pendulum.now("UTC"), schedule_interval="0 */3 * * *", catchup=False) # Cada tres horas se ejecutaría 'wallet_analysis_dag'
+def wallet_analysis_dag():
+
+    @task
+    def fetch_wallets():
+        
+        hook = PostgresHook(postgres_conn_id="polymarket")
+        records = hook.get_records("""
+            SELECT wallet_address
+            FROM usuarios
+            WHERE es_sospechoso = true;
+        """)
+        
+        return [r[0] for r in records]
+
+    @task
+    def process_wallets(wallet_addresses):
+        http_session = requests.Session()
+        adapter = requests.adapters.HTTPAdapter(pool_connections=100, pool_maxsize=100)
+        http_session.mount("https://", adapter)
+        http_session.mount("http://", adapter)
+        MAX_WORKERS = 20
+        analyze_multiple_wallets_positions(http_session, wallet_addresses, max_workers=MAX_WORKERS)
+
+    wallets = fetch_wallets()
+    process_wallets(wallets)
+
+dag = wallet_analysis_dag()
