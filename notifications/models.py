@@ -24,12 +24,21 @@ class SuspectUserPayload(BaseModel):
     total_earned: float
     positions: int
 
+class SuspectTradePayload(BaseModel):
+    wallet: str
+    title: str
+    size: float
+
 
 class SuspectUserAnomaly(BaseModel):
     alert_id: str  # UUID
     sub_type: Literal["SUSPECT_USER"]
     payload: SuspectUserPayload
     timestamp: datetime
+
+class SuspectTradeAnomaly(BaseModel):
+    sub_type: Literal["SUSPECT_TRADE"]
+    payload: SuspectTradePayload
 
 
 class Notification(BaseModel):
@@ -39,4 +48,4 @@ class Notification(BaseModel):
 
 
 # Add here the rest of the anomaly models:
-Anomaly = Union[FlipAnomaly, SuspectUserAnomaly]  # Add new anomaly types here
+Anomaly = Union[FlipAnomaly, SuspectUserAnomaly, SuspectTradeAnomaly]  # Add new anomaly types here
