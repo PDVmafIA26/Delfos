@@ -38,13 +38,6 @@ def main():
         print(f"    - Total markets mapped: {len(market_mapping)}")
         print(f"    - Total events saved: {len(collected_events)}")
 
-        # Fetch top wallets concurrently while WebSocket streams
-        wallet_data = run_top_wallets_ingestion(http_session, all_market_ids)
-
-        # Analyze top wallets data
-        wallet_history_data = run_wallet_analysis_pipeline(http_session, wallet_data)
-        get_producer().flush()
-
         # Execute WebSocket in a separate thread to avoid blocking
         websocket_thread = threading.Thread(
             target=run_websocket, args=(all_assets_ids, stop_event)
@@ -53,10 +46,12 @@ def main():
         websocket_thread.start()
         print("WebSocket ingestion started in background.")
 
-        # NOTE: WebSocket is started after top_wallets ingestion completes.
-        # This is intentional during development to keep terminal output readable.
-        # In production, start the WebSocket first to avoid missing market data
-        # while top_wallets ingestion is running.
+        print("Starting top wallets ingestion and analysis...")
+        # Fetch top wallets concurrently while WebSocket streams
+        wallet_data = run_top_wallets_ingestion(http_session, all_market_ids)
+        # Analyze top wallets data
+        wallet_history_data = run_wallet_analysis_pipeline(http_session, wallet_data)
+        get_producer().flush()
 
         while websocket_thread.is_alive():
             websocket_thread.join(timeout=1.0)
@@ -85,7 +80,7 @@ def main():
         end_time = time.time()
         elapsed_time = end_time - start_time
         minutes, seconds = divmod(elapsed_time, 60)
-        
+
         print(f"total execution time: {int(minutes)} min y {seconds:.2f} seg")
 
 

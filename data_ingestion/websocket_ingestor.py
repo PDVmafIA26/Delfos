@@ -13,14 +13,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-INTERESTING_EVENT_TYPES = [
-    # "price_change",
-    # "book",
-    "last_trade_price",
-    # "best_bid_ask",
-    "market_resolved",
-]
-
 
 def on_message(ws, message):
     try:
@@ -49,34 +41,23 @@ def on_message(ws, message):
             logger.info(
                 f"Automatically unsubscribed from resolved tokens: {resolved_tokens}"
             )
+  
+    try:
+        producer = get_producer()
 
-    # Guard clause: If it's not an interesting event type, exits.
-    if event_type not in INTERESTING_EVENT_TYPES:
-        return
+        if producer:
+            producer.send_data(
+                topic="websockets",
+                data=data,
+                key=event_type,
+                headers=[
+                    ("event_type", event_type),
+                ],
+            )
+            logger.debug("Message sent to Kafka")
 
-    # Only enters if it's a market resolution, or if it's a last trade price and the side is BUY
-    is_resolved = event_type == "market_resolved"
-    is_buy_trade = event_type == "last_trade_price" and data.get("side") == "BUY"
-
-    if is_resolved or is_buy_trade:
-        try:
-            producer = get_producer()
-
-            if producer:
-                market_id = data.get("market_id")
-
-                producer.send_data(
-                    topic="websockets",
-                    data=data,
-                    key=str(market_id) if market_id else None,
-                    headers=[
-                        ("event_type", event_type),
-                    ],
-                )
-                logger.debug("Message sent to Kafka")
-
-        except Exception as e:
-            logger.error(f"Error sending message to Kafka: {e}")
+    except Exception as e:
+        logger.error(f"Error sending message to Kafka: {e}")
 
 
 def on_error(ws, error):

@@ -33,7 +33,6 @@ def _process_single_market(session, condition_id):
             # 200 OK: Data retrieved successfully
             if response.status_code == 200:
                 data = response.json()
-                market_data = {"market_id": condition_id, "top_holders": data}
 
                 # Send data to Kafka
                 try:
@@ -41,7 +40,7 @@ def _process_single_market(session, condition_id):
                     producer = get_producer()
                     if producer:
                         get_producer().send_data(
-                            topic="top_wallets", data=market_data, key=str(condition_id)
+                            topic="top_wallets", data=data, key=condition_id
                         )
                         # print(f"Top wallets (Kafka) -> Market {condition_id}")
                 except Exception as e:
@@ -68,7 +67,9 @@ def _process_single_market(session, condition_id):
                     0, 1
                 )  # Exponential backoff: 1.3s, 2.7s, 1.1s, 4.6s...
                 if response.status_code == 429:
-                    print(f"[429] Too many requests. THROTTLING market {condition_id} for {wait}s...")
+                    print(
+                        f"[429] Too many requests. THROTTLING market {condition_id} for {wait}s..."
+                    )
                     continue
                 elif response.status_code == 500:
                     print(
@@ -146,7 +147,6 @@ def extract_unique_wallets(all_markets_top_wallets):
     """
     # Prevent duplicates
     unique_wallets = set()
-    holder_data = {}
 
     # Iterate through each market's data
     for market_id, token_list in all_markets_top_wallets.items():
@@ -157,14 +157,14 @@ def extract_unique_wallets(all_markets_top_wallets):
                 # Only add valid user addresses (starting with 0x)
                 if address and address.startswith("0x"):
                     unique_wallets.add(address)
-                    holder_data[address] = holder
 
     # Save unique wallets list to JSON file for later enrichment
     unique_file_name = "unique_wallets_list.json"
     unique_data = {
-        # "generated_at": datetime.now(timezone.utc).isoformat(), # UTC timestamp for reproducibility
         "total_unique_wallets": len(unique_wallets),  # Count of unique addresses found
-        "wallet_addresses": holder_data,  # Convert set to list for JSON serialization
+        "wallet_addresses": list(
+            unique_wallets
+        ),  # Convert set to list for JSON serialization
     }
 
     # Write the unique wallets data to disk
@@ -187,14 +187,12 @@ if __name__ == "__main__":
 
     MAX_WORKERS = 20  # Good balance between speed and safety (due to rate limits)
     # Value can be changed
-    CATEGORIES_TAG = ["politics", "geopolitics", "tech", "finance", "economy"]
+    CATEGORIES_TAG = ["economy"]
 
-    market_mapping, _ = obtain_event_data(
-            http_session, CATEGORIES_TAG
-        )
-    
+    market_mapping, _ = obtain_event_data(http_session, CATEGORIES_TAG)
+
     all_market_ids = market_mapping.keys()
-    
+
     # Load wallets from unique list
     run_top_wallets_ingestion(http_session, all_market_ids, MAX_WORKERS)
 

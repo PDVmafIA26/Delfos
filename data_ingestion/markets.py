@@ -235,11 +235,7 @@ def create_json_output(file_name, data):
     """
     From the data obtained from the API, create a JSON file with a timestamp
     """
-    now = datetime.now(timezone.utc)
-    
-    timestamp_str = now.strftime("%Y-%m-%d_%H-%M-%S")
-
-    output_filename =  timestamp_str + file_name + ".json"
+    output_filename = + file_name + ".json"
 
     print(f"\n--- Saving all data to {output_filename} ---")
     
