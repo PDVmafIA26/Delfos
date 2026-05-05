@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Literal, Optional  # Union
+from typing import Literal, Optional, Union
 
 from pydantic import BaseModel
 
@@ -19,6 +19,19 @@ class FlipAnomaly(BaseModel):
     timestamp: datetime
 
 
+class SuspectUserPayload(BaseModel):
+    wallet: str
+    total_earned: float
+    positions: int
+
+
+class SuspectUserAnomaly(BaseModel):
+    alert_id: str  # UUID
+    sub_type: Literal["SUSPECT_USER"]
+    payload: SuspectUserPayload
+    timestamp: datetime
+
+
 class Notification(BaseModel):
     text: str
     image_path: Optional[str] = None
@@ -26,4 +39,4 @@ class Notification(BaseModel):
 
 
 # Add here the rest of the anomaly models:
-Anomaly = FlipAnomaly  # AnomalyType = Union[FlipAnomaly, WhaleMovementAnomaly, etc.]
+Anomaly = Union[FlipAnomaly, SuspectUserAnomaly]  # Add new anomaly types here

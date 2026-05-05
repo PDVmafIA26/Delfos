@@ -1,7 +1,7 @@
 from typing import Callable, Dict
 
 from config import DEFAULT_IMAGES, POLIMARKET_BASE_URL
-from models import Anomaly, FlipAnomaly, Notification
+from models import Anomaly, FlipAnomaly, SuspectUserAnomaly, Notification
 
 
 def format_flip_notification(data: FlipAnomaly) -> Notification:
@@ -15,9 +15,20 @@ def format_flip_notification(data: FlipAnomaly) -> Notification:
     return Notification(text=text, image_path=DEFAULT_IMAGES.get("FLIP"))
 
 
+def format_suspect_user_notification(data: SuspectUserAnomaly) -> Notification:
+    """Handler for SUSPECT_USER anomalies. Returns a Notification object with formatted text."""
+    text = (
+        f"🚨 *Suspect User Anomaly Detected!*\n\n"
+        f"🤵🏼‍♂️ *{data.payload.wallet}*\n"
+        f"🔄 Total Earned: {data.payload.total_earned}\n"
+        f"💼 Positions: {data.payload.positions}\n"
+    )
+    return Notification(text=text, image_path=DEFAULT_IMAGES.get("SUSPECT_USER"))
+
+
 HANDLERS: Dict[str, Callable[[Anomaly], Notification]] = {
     "FLIP": format_flip_notification,
-    # "SPIKE": format_spike,etc.
+    "SUSPECT_USER": format_suspect_user_notification,
 }
 
 
