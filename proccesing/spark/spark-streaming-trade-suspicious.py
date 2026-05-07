@@ -62,12 +62,30 @@ df_final = (
 def send_message(row):
     
 
-    url = f"https://api.telegram.org/bot/notify"
+    url = "http://localhost:8000/notify"
+
+    json = {
+        "alert_id": "0",
+        "sub_type": "SUSPECT_TRADE",
+        "payload": {
+            "wallet": row.wallet_address,
+            "title": row.market_title,
+            "size": float(row.size)
+        },
+        "timestamp": datetime.utcnow().isoformat()
+    }
 
     try:
-        requests.post(url, timeout=20)
+        response = requests.post(
+            url,
+            json=json,
+            timeout=20
+        )
+
+        print(f"Status: {response.status_code}")
+
     except Exception as e:
-        print(f"Error sending Telegram: {e}")
+        print(f"Error sending notification: {e}")
 
 # 6. Writing to PostgreSQL (JDBC)
 def write_to_db(batch_df, batch_id):
@@ -77,8 +95,7 @@ def write_to_db(batch_df, batch_id):
         "asset_id",
         "status",
         "realized_pnl",
-        "wallet_address"
-    )
+        "wallet_address")
     (
         df_db.write
         .format("jdbc")
