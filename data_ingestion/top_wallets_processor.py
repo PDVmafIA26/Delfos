@@ -107,8 +107,7 @@ def _process_single_market(session, condition_id):
 def run_top_wallets_ingestion(session, condition_ids, max_workers=10):
     """
     Orchestrates the concurrent ingestion of top wallet holders for all given markets.
-    Fetches data in parallel using a ThreadPoolExecutor, sends each market's results
-    to Kafka, and saves the compiled data to disk.
+    Fetches data in parallel using a ThreadPoolExecutor and sends each market's results to Kafka.
     """
 
     all_wallets = {}
@@ -128,12 +127,6 @@ def run_top_wallets_ingestion(session, condition_ids, max_workers=10):
             except Exception as e:
                 c_id = futures[future]
                 print(f"[{idx}/{len(condition_ids)}] ✗ Error in market {c_id}: {e}")
-
-    # Save to JSON file
-    file_name = "top_wallets_data.json"
-    with open(file_name, "w", encoding="utf-8") as file:
-        json.dump(all_wallets, file, indent=4, ensure_ascii=False)
-    print(f"Top wallets data saved to '{file_name}'")
 
     # Proceed to extract unique wallet addresses
     return extract_unique_wallets(all_wallets)
@@ -159,7 +152,7 @@ def extract_unique_wallets(all_markets_top_wallets):
                     unique_wallets.add(address)
 
     # Save unique wallets list to JSON file for later enrichment
-    unique_file_name = "unique_wallets_list.json"
+    unique_file_name = "data_ingestion/unique_wallets_list.json"
     unique_data = {
         "total_unique_wallets": len(unique_wallets),  # Count of unique addresses found
         "wallet_addresses": list(

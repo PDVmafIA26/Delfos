@@ -1,15 +1,10 @@
 # Combines profile enrichment and trading history
-# Generates a single JSON file with complete information per wallet
-# Profile data & trading history
-
-import traceback
+# Fetches profile data & trading history and sends it to Kafka.
 
 import requests
 import json
 import time
-from datetime import datetime, timezone
 from typing import Dict, Any, List
-from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import random
 from kafka_manager import get_producer
@@ -122,34 +117,8 @@ def analyze_wallet(session, wallet_address: str) -> Dict[str, Any]:
     return history
 
 
-def save_results(results: List[Dict[str, Any]], output_path: str) -> bool:
-    # Save combined results to JSON file
-    try:
-        output_file = Path(output_path)
-        output_file.parent.mkdir(parents=True, exist_ok=True)
-
-        output_data = {
-            "metadata": {
-                "generated_at": datetime.now(timezone.utc).isoformat(),
-                "total_wallets": len(results),
-                "successful_fetches": len(results),
-            },
-            "wallets": results,
-        }
-
-        with open(output_file, "w", encoding="utf-8") as f:
-            json.dump(output_data, f, indent=2, ensure_ascii=False)
-
-        print(f"\n[✓] Results saved to: {output_path}")
-        return True
-
-    except Exception as e:
-        print(f"[X] Error saving: {e}")
-        return False
-
-
 def load_wallets_from_file(
-    file_path: str = "unique_wallets_list.json",
+    file_path: str = "data_ingestion/unique_wallets_list.json",
 ) -> List[str]:
     # Load wallet addresses from unique_wallets_list.json
     try:
@@ -168,13 +137,12 @@ def load_wallets_from_file(
 def run_wallet_analysis_pipeline(
     session,
     wallet_addresses: Dict[str, Any],
-    output_file: str = "wallets_complete_data.json",
     max_workers: int = 7,
 ) -> List[Dict[str, Any]]:
     """
     Orchestrates the concurrent ingestion and analysis of top wallet users data.
-    Fetches data in parallel using a ThreadPoolExecutor, sends each user's results
-    to Kafka, and saves the compiled data to disk.
+    Fetches data in parallel using a ThreadPoolExecutor and sends each user's results
+    to Kafka.
     """
     print("=" * 60)
     print("WALLET ANALYZER PIPELINE")
@@ -205,13 +173,6 @@ def run_wallet_analysis_pipeline(
                 )
                 results.append({})
 
-    # Save results if an output file is specified
-    if output_file:
-        save_results(results, output_file)
-
-    if output_file:
-        print(f"\nOutput saved to: {output_file}")
-
     return results
 
 
@@ -223,8 +184,7 @@ def main():
     http_session.mount("https://", adapter)
     http_session.mount("http://", adapter)
 
-    INPUT_FILE = "unique_wallets_list.json"
-    OUTPUT_FILE = "wallets_complete_data.json"
+    INPUT_FILE = "data_ingestion/unique_wallets_list.json"
     MAX_WORKERS = 20  # Good balance between speed and safety (due to rate limits)
     # Value can be changed
 
@@ -237,7 +197,7 @@ def main():
 
     # Analyze all wallets
     run_wallet_analysis_pipeline(
-        http_session, wallet_addresses, OUTPUT_FILE, max_workers=MAX_WORKERS
+        http_session, wallet_addresses, max_workers=MAX_WORKERS
     )
     get_producer().flush()
 

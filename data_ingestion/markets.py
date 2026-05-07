@@ -7,7 +7,7 @@ import os
 from kafka_manager import get_producer
 
 # File name for caching category tag IDs
-TAGS_FILE = "categories_tags.json"
+TAGS_FILE = "data_ingestion/categories_tags.json"
 
 def get_id_by_slug(session, tag_slug):
     """
@@ -82,7 +82,7 @@ def get_order_book(session, token_id, max_retries=3):
     print(f"[!] Retries exhausted for token {token_id}.")
     return token_id, empty_book
 
-def get_markets_info(session, tag_slug, ids_categories_exclude, generate_json=True):
+def get_markets_info(session, tag_slug, ids_categories_exclude):
     """
     Fetches event and market data from the Polymarket Gamma API using pagination,
     then concurrently fetches the associated order books for open markets.
@@ -148,8 +148,7 @@ def get_markets_info(session, tag_slug, ids_categories_exclude, generate_json=Tr
                                 for token in parsed_tokens:
                                     market["order_books"][token] = {"bids": [], "asks": []}
 
-            if generate_json:
-                all_api_events.extend(events)
+            all_api_events.extend(events)
 
             print(f"Page {page} processed: {len(events)} events evaluated.")
             current_cursor = data.get("next_cursor")
@@ -176,31 +175,28 @@ def get_markets_info(session, tag_slug, ids_categories_exclude, generate_json=Tr
     #         fetched_order_books[token] = ob_data
 
     # PHASE 3: Re-inject the successfully fetched order books back into their parent market JSON objects
-    if generate_json:
-        for event in all_api_events:
-            for market in event.get("markets", []):
-                if not market.get("closed", False):
-                    for token in market.get("clobTokenIds", []):
-                        if token in fetched_order_books:
-                            market["order_books"][token] = fetched_order_books[token]
+    for event in all_api_events:
+        for market in event.get("markets", []):
+            if not market.get("closed", False):
+                for token in market.get("clobTokenIds", []):
+                    if token in fetched_order_books:
+                        market["order_books"][token] = fetched_order_books[token]
 
-            # Once the event information is complete, it is sent to Kafka.
-            event_id = str(event.get("id", ""))
-            try:
-                producer = get_producer()
-                if producer:
-                    producer.send_data(
-                        topic="events", 
-                        data=event, 
-                        key=event_id if event_id else None
-                    )
-            except Exception as e:
-                print(f"Error sending event '{event_id}' to Kafka: {e}")
+        # Once the event information is complete, it is sent to Kafka.
+        event_id = str(event.get("id", ""))
+        try:
+            producer = get_producer()
+            if producer:
+                producer.send_data(
+                    topic="events", 
+                    data=event, 
+                    key=event_id if event_id else None
+                )
+        except Exception as e:
+            print(f"Error sending event '{event_id}' to Kafka: {e}")
     print(f"[✓] Extraction complete for '{tag_slug}'. Total markets mapped: {len(market_tokens_mapping)}\n")
 
-    if generate_json:
-        return market_tokens_mapping, all_api_events
-    return market_tokens_mapping
+    return market_tokens_mapping, all_api_events
 
 def create_tag_file(session, category_tags):
     """
@@ -231,22 +227,6 @@ def read_tag_file():
         # Return the categories mapping, or an empty dict if the file structure is unexpected
         return data
 
-def create_json_output(file_name, data):
-    """
-    From the data obtained from the API, create a JSON file with a timestamp
-    """
-    output_filename = + file_name + ".json"
-
-    print(f"\n--- Saving all data to {output_filename} ---")
-    
-    final_output = {
-        "ingestion_timestamp": datetime.now(timezone.utc).isoformat(),
-        "events": data
-    }
-
-    with open(output_filename, "w", encoding="utf-8") as f:
-        json.dump(final_output, f, indent=4, ensure_ascii=False)
-
 def obtain_event_data(http_session, category_tag):
     """
     From an existing session, check if the tag file exists and obtain information about the events and markets for a category.
@@ -261,15 +241,14 @@ def obtain_event_data(http_session, category_tag):
     total_market_mapping = {}
 
     for category in category_tag:
-        mapping, events_json = get_markets_info(
+        mapping, events_data = get_markets_info(
             session=http_session,
             tag_slug=category, 
-            ids_categories_exclude=ids_categories_exclude, 
-            generate_json=True
+            ids_categories_exclude=ids_categories_exclude
         )
         
         total_market_mapping.update(mapping)
-        all_collected_events.extend(events_json)
+        all_collected_events.extend(events_data)
 
         # Append the current category ID to the exclusion list to prevent data duplication in subsequent iterations
         if categories[category]:
@@ -300,37 +279,20 @@ if __name__ == "__main__":
     total_market_mapping = {}
 
     for category in CATEGORIES_TAG:
-        mapping, events_json = get_markets_info(
+        mapping, events_data = get_markets_info(
             session=http_session,
             tag_slug=category, 
-            ids_categories_exclude=ids_categories_exclude, 
-            generate_json=True
+            ids_categories_exclude=ids_categories_exclude
         )
         
         total_market_mapping.update(mapping)
-        all_collected_events.extend(events_json)
+        all_collected_events.extend(events_data)
 
         # Append the current category ID to the exclusion list to prevent data duplication in subsequent iterations
         if categories[category]:
             ids_categories_exclude.append(categories[category])
             
     http_session.close()
-    
-    now = datetime.now(timezone.utc)
-    
-    timestamp_str = now.strftime("%Y-%m-%d_%H-%M-%S")
-
-    output_filename = "events" + timestamp_str + ".json"
-
-    print(f"\n--- Saving all data to {output_filename} ---")
-    
-    final_output = {
-        "ingestion_timestamp": datetime.now(timezone.utc).isoformat(),
-        "events": all_collected_events
-    }
-
-    with open(output_filename, "w", encoding="utf-8") as f:
-        json.dump(final_output, f, indent=4, ensure_ascii=False)
 
     print("\n[✓] Process successfully completed.")
     print(f"    - Total markets mapped: {len(total_market_mapping)}")
