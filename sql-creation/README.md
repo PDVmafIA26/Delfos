@@ -1,7 +1,7 @@
 # Delfos — Capa Oro 🏛️
 
 > **Gremio:** Capa Oro / Base de Datos  
-> **Rama de trabajo:** `feature/capa-oro-schema-triggers`  
+> **Rama de trabajo:** `feature/sql-creation`  
 > **Tecnologías:** PostgreSQL 16, Python 3.11, Docker & Docker Compose
 
 ---
