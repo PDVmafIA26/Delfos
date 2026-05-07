@@ -1,0 +1,142 @@
+"0x689a77ca28cf59efae262fd37d07aa787194d52b13bbe009a223de15bf5c62af": [
+        {
+            "token": "89667254973027475163940771416019167537897714895546880163448338769528535684137",
+            "holders": [
+                {
+                    "proxyWallet": "0xf85b411d8830adc34af87e6a8452905eb640efd9",
+                    "bio": "",
+                    "asset": "89667254973027475163940771416019167537897714895546880163448338769528535684137",
+                    "pseudonym": "Far-Flung-Stay",
+                    "amount": 108.69565,
+                    "displayUsernamePublic": true,
+                    "outcomeIndex": 1,
+                    "name": "aleuijipv",
+                    "profileImage": "",
+                    "profileImageOptimized": "",
+                    "verified": false
+                },
+                {
+                    "proxyWallet": "0x17e202ddc4fb79878261893fc74ab38e8db7d257",
+                    "bio": "",
+                    "asset": "89667254973027475163940771416019167537897714895546880163448338769528535684137",
+                    "pseudonym": "Brave-Fountain",
+                    "amount": 10.330562,
+                    "displayUsernamePublic": true,
+                    "outcomeIndex": 1,
+                    "name": "Gifini",
+                    "profileImage": "",
+                    "profileImageOptimized": "",
+                    "verified": false
+                },
+                {
+                    "proxyWallet": "0xfd0c5fce351a8a79b11f5e4a00758e2c11b02fc3",
+                    "bio": "",
+                    "asset": "89667254973027475163940771416019167537897714895546880163448338769528535684137",
+                    "pseudonym": "Decent-Loading",
+                    "amount": 10.224947,
+                    "displayUsernamePublic": true,
+                    "outcomeIndex": 1,
+                    "name": "Moneyiloveu",
+                    "profileImage": "",
+                    "profileImageOptimized": "",
+                    "verified": false
+                },
+                {
+                    "proxyWallet": "0x36e3f0974aa3eab9a588583abeabf61fd36f1e70",
+                    "bio": "",
+                    "asset": "89667254973027475163940771416019167537897714895546880163448338769528535684137",
+                    "pseudonym": "Buzzing-Carrot",
+                    "amount": 10.02,
+                    "displayUsernamePublic": true,
+                    "outcomeIndex": 1,
+                    "name": "jingboo",
+                    "profileImage": "",
+                    "profileImageOptimized": "",
+                    "verified": false
+                },
+                {
+                    "proxyWallet": "0xd04ba7d3d2343ff4f88a6653e4c5c741e13a2be6",
+                    "bio": "",
+                    "asset": "89667254973027475163940771416019167537897714895546880163448338769528535684137",
+                    "pseudonym": "Ugly-Deliberation",
+                    "amount": 7,
+                    "displayUsernamePublic": true,
+                    "outcomeIndex": 1,
+                    "name": "0xd04ba7d3d2343ff4f88a6653e4c5c741e13a2be",
+                    "profileImage": "",
+                    "profileImageOptimized": "",
+                    "verified": false
+                }
+            ]
+        },
+        {
+            "token": "62499647704758013801224496519154801919449219197687180369505612744147504118777",
+            "holders": [
+                {
+                    "proxyWallet": "0xb01c743080f86d0341bcec2c9e779be41e87ecb7",
+                    "bio": "",
+                    "asset": "62499647704758013801224496519154801919449219197687180369505612744147504118777",
+                    "pseudonym": "Sweet-Charger",
+                    "amount": 999.998686,
+                    "displayUsernamePublic": true,
+                    "outcomeIndex": 0,
+                    "name": "UPFLY",
+                    "profileImage": "",
+                    "profileImageOptimized": "",
+                    "verified": false
+                },
+                {
+                    "proxyWallet": "0x856c53f432858279f703ac9b7d21ca712185727d",
+                    "bio": "Bets based on astrology",
+                    "asset": "62499647704758013801224496519154801919449219197687180369505612744147504118777",
+                    "pseudonym": "Prickly-Attic",
+                    "amount": 568.400505,
+                    "displayUsernamePublic": true,
+                    "outcomeIndex": 0,
+                    "name": "astrobeliever",
+                    "profileImage": "",
+                    "profileImageOptimized": "",
+                    "verified": false
+                },
+                {
+                    "proxyWallet": "0x017eb202b0b01f506bc01acf173fd78194b51bf7",
+                    "bio": "",
+                    "asset": "62499647704758013801224496519154801919449219197687180369505612744147504118777",
+                    "pseudonym": "Expensive-Analogy",
+                    "amount": 538.888887,
+                    "displayUsernamePublic": true,
+                    "outcomeIndex": 0,
+                    "name": "Michael0123",
+                    "profileImage": "",
+                    "profileImageOptimized": "",
+                    "verified": false
+                },
+                {
+                    "proxyWallet": "0x7a4841fb4ae876d91fe16a143c66369b70c9b7b4",
+                    "bio": "",
+                    "asset": "62499647704758013801224496519154801919449219197687180369505612744147504118777",
+                    "pseudonym": "Ill-Fated-Mortal",
+                    "amount": 535.714284,
+                    "displayUsernamePublic": true,
+                    "outcomeIndex": 0,
+                    "name": "satoshi25",
+                    "profileImage": "",
+                    "profileImageOptimized": "",
+                    "verified": false
+                },
+                {
+                    "proxyWallet": "0x6b0ebbef2630b9a0da35594bf7ddd1911246e3ea",
+                    "bio": "",
+                    "asset": "62499647704758013801224496519154801919449219197687180369505612744147504118777",
+                    "pseudonym": "",
+                    "amount": 361.846189,
+                    "displayUsernamePublic": false,
+                    "outcomeIndex": 0,
+                    "name": "",
+                    "profileImage": "",
+                    "profileImageOptimized": "",
+                    "verified": false
+                }
+            ]
+        }
+    ],

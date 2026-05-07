@@ -1,5 +1,7 @@
 # Delfos
 Delfos is a high school project focused in real life event predictions. It uses inside trading analysis over polymarket to create its predictions.
+https://t.me/+mNquI5Ob4WNkNDRk
+
 [![My Skills](https://skillicons.dev/icons?i=python,docker,kafka,spark,airflow)](https://skillicons.dev)
 ## Overview
 
