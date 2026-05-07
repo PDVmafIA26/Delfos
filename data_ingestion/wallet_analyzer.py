@@ -4,25 +4,25 @@
 import requests
 import json
 import time
+import random
 from typing import Dict, Any, List
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import random
+
+from logger import get_logger
 from kafka_manager import get_producer
 from rate_limiter import RateLimiter
+
+log = get_logger(__name__)
 
 HISTORY_URL = "https://data-api.polymarket.com/closed-positions"
 api_rate_limiter = RateLimiter(max_calls=140, period=10.0, min_interval=0.075)
 
 
-def fetch_history(
-    session,
-    wallet_address: str,
-) -> Dict[str, Any]:
+def fetch_history(session, wallet_address: str) -> Dict[str, Any]:
     """Fetch only the first 50 closed positions for a wallet."""
     positions = []
     max_retries = 3
 
-    # Fetch first page (50 positions)
     params = {
         "user": wallet_address,
         "limit": 50,
@@ -33,7 +33,6 @@ def fetch_history(
 
     page_success = False
 
-    # Retry loop in case the conexion fails
     for attempt in range(max_retries):
         try:
             api_rate_limiter.wait()
@@ -42,61 +41,52 @@ def fetch_history(
             if response.status_code == 200:
                 positions = response.json()
                 page_success = True
-                break  # Success, exit the retry loop
+                break
 
             elif response.status_code == 400:
-                print(f"[400] Bad Request en {wallet_address}. Check parameters.")
-                break  # Fatal error, exit retry loop
+                log.error("[400] Bad Request for wallet %s. Check parameters.", wallet_address)
+                break
 
             elif response.status_code == 401:
-                print(
-                    f"[401] Unauthorized en {wallet_address}. Check API Key or signatures."
-                )
-                break  # Fatal error, exit retry loop
+                log.error("[401] Unauthorized for wallet %s. Check API Key.", wallet_address)
+                break
 
-            # Network/Server temporary errors: Apply exponential backoff and retry
             elif response.status_code in [408, 429, 500, 502, 503, 504]:
-                wait = (2**attempt) + random.uniform(0, 1)
+                wait = (2 ** attempt) + random.uniform(0, 1)
                 if response.status_code == 429:
-                    print(
-                        f"[429] Too many requests. THROTTLING history for {wallet_address} for {wait:.2f}s..."
-                    )
-                    pass
-                elif response.status_code == 500:
-                    print(
-                        f"[500] Internal Server Error. Retrying history for {wallet_address} in {wait:.2f}s..."
+                    log.warning(
+                        "[429] Too many requests. Throttling history for %s for %.2fs...",
+                        wallet_address, wait
                     )
                 else:
-                    print(
-                        f"[{response.status_code}] Server Error. Retrying history for {wallet_address} in {wait:.2f}s..."
+                    log.warning(
+                        "[%d] Server error. Retrying history for %s in %.2fs...",
+                        response.status_code, wallet_address, wait
                     )
-
                 time.sleep(wait)
-                continue  # Proceed to the next attempt in the 'for' loop
+                continue
 
-            # Handle any other undocumented status codes
             else:
-                print(
-                    f"Unexpected error {response.status_code} fetching history for {wallet_address}"
+                log.error(
+                    "Unexpected HTTP %d fetching history for wallet %s",
+                    response.status_code, wallet_address
                 )
                 break
 
         except requests.exceptions.RequestException as e:
-            wait = (2**attempt) + random.uniform(0, 1)
-            print(
-                f"Connection error for history of {wallet_address}: {e}. Retrying in {wait:.2f}s..."
+            wait = (2 ** attempt) + random.uniform(0, 1)
+            log.error(
+                "Connection error fetching history for %s: %s. Retrying in %.2fs...",
+                wallet_address, e, wait
             )
             time.sleep(wait)
         except ValueError:
-            print(f"Error decoding JSON for history of wallet {wallet_address}")
-            break  # Fatal error, exit retry loop
+            log.error("Error decoding JSON for history of wallet %s", wallet_address)
+            break
 
-    # If the retry loop ended without success
-    if not page_success:
-        if attempt == max_retries - 1:
-            print(f"Max retries reached for history of {wallet_address}.")
+    if not page_success and attempt == max_retries - 1:
+        log.error("Max retries reached for history of wallet %s", wallet_address)
 
-    # --- Data processing ---
     if not positions:
         return {}
 
@@ -104,7 +94,6 @@ def fetch_history(
 
 
 def analyze_wallet(session, wallet_address: str) -> Dict[str, Any]:
-
     history = fetch_history(session, wallet_address)
 
     if get_producer():
@@ -120,17 +109,16 @@ def analyze_wallet(session, wallet_address: str) -> Dict[str, Any]:
 def load_wallets_from_file(
     file_path: str = "data_ingestion/unique_wallets_list.json",
 ) -> List[str]:
-    # Load wallet addresses from unique_wallets_list.json
     try:
         with open(file_path, "r", encoding="utf-8") as f:
             data = json.load(f)
 
         wallets = data.get("wallet_addresses", {})
-        print(f"Loaded {len(wallets)} wallets from {file_path}")
+        log.info("Loaded %d wallets from %s", len(wallets), file_path)
         return wallets
 
     except Exception as e:
-        print(f"[X] Error loading wallets: {e}")
+        log.error("Error loading wallets from %s: %s", file_path, e)
         return []
 
 
@@ -141,19 +129,14 @@ def run_wallet_analysis_pipeline(
 ) -> List[Dict[str, Any]]:
     """
     Orchestrates the concurrent ingestion and analysis of top wallet users data.
-    Fetches data in parallel using a ThreadPoolExecutor and sends each user's results
-    to Kafka.
     """
-    print("=" * 60)
-    print("WALLET ANALYZER PIPELINE")
-    print("Fetches trading history for each wallet")
-    print("=" * 60)
+    log.info("=== Wallet Analyzer Pipeline ===")
+    log.info("Fetching trading history for %d wallets (workers=%d)", len(wallet_addresses), max_workers)
 
     if not wallet_addresses:
-        print("No wallets provided to analyze.")
+        log.warning("No wallets provided to analyze.")
         return []
 
-    # Analyze all wallets
     results = []
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
@@ -168,37 +151,32 @@ def run_wallet_analysis_pipeline(
                 results.append(result)
             except Exception as e:
                 wallet_address = futures[future]
-                print(
-                    f"[{idx}/{len(wallet_addresses)}] ✗ {wallet_address[:8]}... - error: {e}"
+                log.error(
+                    "[%d/%d] Error analyzing wallet %s...: %s",
+                    idx, len(wallet_addresses), wallet_address[:8], e
                 )
                 results.append({})
 
+    log.info("Wallet analysis complete. %d/%d processed.", len(results), len(wallet_addresses))
     return results
 
 
 def main():
-
-    # Local test entry point
     http_session = requests.Session()
     adapter = requests.adapters.HTTPAdapter(pool_connections=100, pool_maxsize=100)
     http_session.mount("https://", adapter)
     http_session.mount("http://", adapter)
 
     INPUT_FILE = "data_ingestion/unique_wallets_list.json"
-    MAX_WORKERS = 20  # Good balance between speed and safety (due to rate limits)
-    # Value can be changed
+    MAX_WORKERS = 20
 
-    # Load wallets from unique list
     wallet_addresses = load_wallets_from_file(INPUT_FILE)
 
     if not wallet_addresses:
-        print("No wallets found. Run top_wallets_processor.py first.")
+        log.warning("No wallets found. Run top_wallets_processor.py first.")
         return
 
-    # Analyze all wallets
-    run_wallet_analysis_pipeline(
-        http_session, wallet_addresses, max_workers=MAX_WORKERS
-    )
+    run_wallet_analysis_pipeline(http_session, wallet_addresses, max_workers=MAX_WORKERS)
     get_producer().flush()
 
 

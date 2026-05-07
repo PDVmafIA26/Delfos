@@ -1,27 +1,24 @@
 import json
-import logging
 import threading
 import time
 import requests
 import websocket
+
+from logger import get_logger
 from markets import get_markets_info
 from kafka_manager import get_producer
 
-# Basic logging configuration
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 def on_message(ws, message):
     try:
         data = json.loads(message)
     except json.JSONDecodeError:
-        logger.error("Received message is not a valid JSON")
-        return  # Exit early if the JSON is not valid
+        log.error("Received message is not valid JSON: %.200s", message)
+        return
     except Exception as e:
-        logger.error(f"Error processing the message: {e}")
+        log.exception("Unexpected error parsing WebSocket message: %s", e)
         return
 
     event_type = data.get("event_type")
@@ -38,13 +35,10 @@ def on_message(ws, message):
                     }
                 )
             )
-            logger.info(
-                f"Automatically unsubscribed from resolved tokens: {resolved_tokens}"
-            )
-  
+            log.info("Automatically unsubscribed from resolved tokens: %s", resolved_tokens)
+
     try:
         producer = get_producer()
-
         if producer:
             producer.send_data(
                 topic="websockets",
@@ -54,23 +48,22 @@ def on_message(ws, message):
                     ("event_type", event_type),
                 ],
             )
-            logger.debug("Message sent to Kafka")
+            log.debug("Message sent to Kafka | event_type=%s", event_type)
 
     except Exception as e:
-        logger.error(f"Error sending message to Kafka: {e}")
+        log.error("Error sending WebSocket message to Kafka: %s", e)
 
 
 def on_error(ws, error):
-    logger.error(f"WebSocket Error: {error}")
+    log.error("WebSocket error: %s", error)
 
 
 def on_close(ws, close_status_code, close_msg):
-    logger.warning("### WebSocket closed ###")
+    log.warning("WebSocket closed | status=%s msg=%s", close_status_code, close_msg)
 
 
 def on_open(ws, assets_ids):
-    logger.info("WebSocket connected. Sending subscription payload...")
-
+    log.info("WebSocket connected. Sending subscription for %d assets...", len(assets_ids))
     subscribe_message = {
         "assets_ids": assets_ids,
         "type": "market",
@@ -80,12 +73,10 @@ def on_open(ws, assets_ids):
 
 
 def run_websocket(assets_ids, stop_event: threading.Event = None):
-    # Polymarket WebSocket URL
     websocket_url = "wss://ws-subscriptions-clob.polymarket.com/ws/market"
 
-    # Automatic reconnection loop — exits cleanly if stop_event is set
     while not (stop_event and stop_event.is_set()):
-        logger.info(f"Connecting to {websocket_url}...")
+        log.info("Connecting to WebSocket: %s", websocket_url)
         ws = websocket.WebSocketApp(
             websocket_url,
             on_open=lambda ws: on_open(ws, assets_ids),
@@ -94,22 +85,17 @@ def run_websocket(assets_ids, stop_event: threading.Event = None):
             on_close=on_close,
         )
 
-        # Store ws reference so it can be closed externally
         stop_event.ws = ws
-
-        # Ping-Pong keepalive required by Polymarket
         ws.run_forever(ping_interval=10, ping_timeout=5)
 
         if stop_event and stop_event.is_set():
             break
 
-        logger.info("Waiting 5 seconds before reconnecting...")
+        log.info("WebSocket disconnected. Reconnecting in 5 seconds...")
         time.sleep(5)
 
 
 if __name__ == "__main__":
-
-    # Local test entry point
     http_session = requests.Session()
     adapter = requests.adapters.HTTPAdapter(pool_connections=100, pool_maxsize=100)
     http_session.mount("https://", adapter)

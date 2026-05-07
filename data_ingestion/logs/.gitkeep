@@ -1,0 +1,7 @@
+# Esta carpeta contiene los ficheros de log generados en tiempo de ejecución.
+# Los ficheros .log están excluidos de git (ver .gitignore).
+# Este fichero existe solo para que la carpeta aparezca en el repositorio.
+#
+# Ficheros que se generan al ejecutar cualquier módulo de data_ingestion/:
+#   info.log   → INFO, WARNING, ERROR, CRITICAL (flujo completo)
+#   error.log  → solo ERROR y CRITICAL (para monitorización rápida)

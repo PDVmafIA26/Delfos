@@ -205,3 +205,7 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+# Delfos — logs de ejecucion (generados automaticamente, no versionar)
+# .gitkeep se mantiene para que la carpeta aparezca en el repo
+data_ingestion/logs/*.log
+data_ingestion/logs/*.log.*
