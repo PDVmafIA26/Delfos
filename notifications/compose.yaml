@@ -1,0 +1,9 @@
+services:
+  anomalies_notifier:
+    build: .
+    container_name: delfos-anomalies-notifier
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    restart: unless-stopped
