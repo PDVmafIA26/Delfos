@@ -37,8 +37,10 @@ class SuspectUserAnomaly(BaseModel):
     timestamp: datetime
 
 class SuspectTradeAnomaly(BaseModel):
+    alert_id: str
     sub_type: Literal["SUSPECT_TRADE"]
     payload: SuspectTradePayload
+    timestamp: datetime
 
 
 class Notification(BaseModel):
