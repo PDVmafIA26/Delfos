@@ -1,0 +1,77 @@
+# =============================================================================
+# PROYECTO DELFOS — Capa Oro
+# docker-compose.local.yml : Stack completo para pruebas locales
+#
+# Incluye: PostgreSQL + notify listener + mock reporting server
+#
+# USO (desde la carpeta sql-creation/):
+#   docker compose -f docker-compose.local.yml up --build
+# =============================================================================
+
+services:
+
+  # ─── PostgreSQL ─────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: delfos-postgres-local
+    environment:
+      POSTGRES_DB: delfos
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: delfos_dev_pass
+    volumes:
+      - postgres_local_data:/var/lib/postgresql/data
+      - ./01_schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
+      - ./02_triggers.sql:/docker-entrypoint-initdb.d/02_triggers.sql
+      - ./03_views.sql:/docker-entrypoint-initdb.d/03_views.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d delfos" ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - delfos-local
+
+  # ─── Mock Reporting Server ───────────────────────────────────────────────────
+  mock-reporting:
+    build:
+      context: .
+      dockerfile: Dockerfile.mock
+    container_name: delfos-mock-reporting
+    ports:
+      - "8000:8000"
+    networks:
+      - delfos-local
+
+  # ─── Notify Listener ─────────────────────────────────────────────────────────
+  notify-listener:
+    build:
+      context: .
+      dockerfile: Dockerfile.listener
+    container_name: delfos-notify-listener-local
+    environment:
+      POSTGRES_DB: delfos
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: delfos_dev_pass
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      REPORTING_URL: http://mock-reporting:8000/anomaly
+      NOTIFY_CHANNEL: anomaly_channel
+      HTTP_TIMEOUT: "5"
+      HTTP_MAX_RETRIES: "3"
+      RECONNECT_DELAY: "5"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mock-reporting:
+        condition: service_started
+    networks:
+      - delfos-local
+
+volumes:
+  postgres_local_data:
+
+networks:
+  delfos-local:
+    driver: bridge
