@@ -145,7 +145,6 @@ CREATE TABLE IF NOT EXISTS market_daily_stats (
                                   CASE WHEN avg_price_24h >= 0.5 THEN 'SI' ELSE 'NO' END
                               ) STORED,
     last_stable_price         NUMERIC(10,6),
-    historical_vol_5min_avg   NUMERIC(20,4), 
     updated_at                TIMESTAMPTZ DEFAULT NOW(),
     PRIMARY KEY (asset_id, calc_date)
 );
@@ -159,7 +158,6 @@ CREATE TABLE IF NOT EXISTS user_stats_batch (
     wallet_address              TEXT PRIMARY KEY REFERENCES usuarios(wallet_address) ON DELETE CASCADE,
     historical_pnl_level        TEXT CHECK (historical_pnl_level IN ('HIGH', 'MEDIUM', 'LOW')),
     avg_bet_size                NUMERIC(20,4),
-    global_avg_new_user_volume  NUMERIC(20,4) DEFAULT 50.0,
     updated_at                  TIMESTAMPTZ DEFAULT NOW()
 );
 
