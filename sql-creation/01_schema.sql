@@ -114,7 +114,7 @@ CREATE TABLE IF NOT EXISTS trade_sospechosos (
     realized_pnl   NUMERIC(20,4),
     wallet_address TEXT         REFERENCES usuarios(wallet_address) ON DELETE SET NULL,
     created_at     TIMESTAMPTZ  DEFAULT NOW(),
-    notified       TEXT
+    notified       BOOLEAN
 );
 
 COMMENT ON TABLE trade_sospechosos IS 'Trades marcados como potencialmente anómalos por Spark.';
