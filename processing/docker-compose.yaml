@@ -1,0 +1,110 @@
+services:
+
+  # NUEVA BASE DE DATOS
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=administrador
+    volumes:
+      - ./datos_mongo:/data/db
+
+  # Panel de control visual para MongoDB (Puerto 8081)
+  mongo-express:
+    image: mongo-express
+    container_name: mongo-express
+    depends_on:
+      - mongodb
+    ports:
+      - "8081:8081"
+    environment:
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=admin
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=administrador
+      - ME_CONFIG_MONGODB_URL=mongodb://admin:administrador@mongodb:27017/
+  
+  spark-master:
+    image: apache/spark:3.5.1
+    container_name: spark-master
+    command: >
+      /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
+    ports:
+      - "7077:7077"
+      - "9090:8080"
+
+  spark-worker:
+    image: apache/spark:3.5.1
+    container_name: spark-worker
+    depends_on:
+      - spark-master
+    command: >
+      /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+
+  spark-streaming:
+    image: apache/spark:3.5.1
+    container_name: spark-streaming
+    depends_on:
+      - kafka
+      - spark-master
+    volumes:
+      - ./proccesing/spark:/app
+    environment:
+      - HOME=/tmp
+    command: >
+      bash -c "pip install psycopg2-binary &&
+      /opt/spark/bin/spark-submit
+      --conf spark.jars.ivy=/tmp/.ivy2
+      --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1,org.postgresql:postgresql:42.7.3
+      --master spark://spark-master:7077
+      /app/spark-streaming.py"
+  spark-streaming-price-changes:
+    image: apache/spark:3.5.1
+    container_name: spark-price-changes
+    depends_on:
+      - kafka
+      - spark-master
+      - postgres
+    volumes:
+      - ./proccesing/spark:/app
+    environment:
+      - HOME=/tmp
+    command: >
+      bash -c "
+      /opt/spark/bin/spark-submit
+      --conf spark.jars.ivy=/tmp/.ivy2
+      --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1,org.postgresql:postgresql:42.7.3
+      --master spark://spark-master:7077
+      /app/spark-streaming-price-changes.py
+      "
+
+  spark-batch:
+    image: apache/spark:3.5.1
+    container_name: spark-batch
+    depends_on:
+      - spark-master
+      - postgres
+      - mongodb
+    volumes:
+      - ./proccesing/spark:/app
+    environment:
+      - HOME=/tmp
+    command: >
+      /opt/spark/bin/spark-submit
+      --conf spark.jars.ivy=/tmp/.ivy2
+      --packages org.mongodb.spark:mongo-spark-connector_2.12:10.3.0,org.postgresql:postgresql:42.7.3
+      --master spark://spark-master:7077
+      /app/spark-batch.py
+  
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    environment:
+      POSTGRES_DB: markets
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+    - ./proccesing/init-db:/docker-entrypoint-initdb.d
