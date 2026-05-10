@@ -1,11 +1,8 @@
-# =============================================================================
-# PROVISIONAL - Local development environment only
-# Not intended for production use
-# =============================================================================
-
 services:
+  # ============================================
+  # KAFKA (KRaft mode - no Zookeeper needed)
+  # ============================================
   kafka:
-    # Official Apache Kafka image (KRaft mode — no Zookeeper needed)
     image: apache/kafka:3.7.0
     container_name: kafka-local
     ports:
@@ -13,22 +10,23 @@ services:
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
-
-      # Two listeners: internal (29092) for inter-container comms, external (9092) for host access
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,CONTROLLER://0.0.0.0:9093,EXTERNAL://0.0.0.0:9092
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,EXTERNAL://localhost:9092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
-
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
-
-      # Replication factor set to 1 — single node, not suitable for production
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    restart: unless-stopped
+    networks:
+      - delfos-net
 
+  # ============================================
+  # KAFKA UI - Web interface for monitoring
+  # ============================================
   kafka-ui:
-    # Web UI for inspecting topics, messages and consumer groups
     image: provectuslabs/kafka-ui:latest
     container_name: kafka-ui
     ports:
@@ -37,5 +35,53 @@ services:
       - kafka
     environment:
       KAFKA_CLUSTERS_0_NAME: Local
-      # Uses internal listener — kafka-ui and kafka share the same Docker network
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+    restart: unless-stopped
+    networks:
+      - delfos-net
+
+  # ============================================
+  # MONGODB - Bronze layer storage
+  # ============================================
+  mongodb:
+    image: mongodb/mongodb-community-server:8.0-ubuntu2204
+    container_name: delfos-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    restart: unless-stopped
+    networks:
+      - delfos-net
+
+  # ============================================
+  # KAFKA CONSUMER - Reads from Kafka, writes to MongoDB
+  # ============================================
+  kafka-consumer:
+    image: python:3.10-slim
+    container_name: kafka-consumer
+    depends_on:
+      - kafka
+      - mongodb
+    restart: unless-stopped
+    volumes:
+      - ../bronze_layer:/app # Mount the bronze_layer directory
+    working_dir: /app
+    command: >
+      sh -c "
+      pip install --no-cache-dir confluent-kafka pymongo &&
+      python -u kafka_to_mongodb.py
+      "
+    environment:
+      - KAFKA_BROKER=kafka:29092
+      - MONGO_URI=mongodb://mongodb:27017/
+      - CONSUMER_GROUP=bronze-consumer-group
+    networks:
+      - delfos-net
+
+volumes:
+  mongodb_data:
+
+networks:
+  delfos-net:
+    driver: bridge
