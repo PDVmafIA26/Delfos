@@ -6,16 +6,17 @@ x-airflow-common:
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
     AIRFLOW__CORE__FERNET_KEY: ''
     AIRFLOW__CORE__LOAD_EXAMPLES: 'False'
-    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres_airflow/airflow
     AIRFLOW__WEBSERVER__SECRET_KEY: my_super_secret_key_123
-    AIRFLOW_CONN_POLYMARKET: postgresql://airflow:airflow@postgres:5432/markets
+    AIRFLOW_CONN_POLYMARKET: postgresql://postgres:postgres@postgres:5432/markets
+    PYTHONPATH: /opt/airflow
   volumes:
     - ./dags:/opt/airflow/dags
-    - ./scripts:/opt/airflow/scripts
+    - ../data_ingestion:/opt/airflow/scripts
 
 services:
 
-  postgres:
+  postgres_airflow:
     image: postgres:13
     container_name: postgres_airflow
     environment:
@@ -23,28 +24,36 @@ services:
       POSTGRES_PASSWORD: airflow
       POSTGRES_DB: airflow
     ports:
-      - "5432:5432"
+      - "5435:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 5s
+      retries: 5
+      timeout: 5s
+
+  airflow-init:
+    <<: *airflow-common
+    container_name: airflow_init
+    depends_on:
+      postgres_airflow:
+        condition: service_healthy
+    command: >
+      bash -c "airflow db init && airflow users create --username admin --password admin --firstname admin --lastname admin --role Admin --email admin@example.com"
 
   airflow-webserver:
     <<: *airflow-common
     container_name: airflow_webserver
     depends_on:
-      - postgres
+      airflow-init:
+        condition: service_completed_successfully
     ports:
-      - "8080:8080"
+      - "8085:8080"
     command: webserver
 
   airflow-scheduler:
     <<: *airflow-common
     container_name: airflow_scheduler
     depends_on:
-      - postgres
+      airflow-init:
+        condition: service_completed_successfully
     command: scheduler
-
-  airflow-init:
-    <<: *airflow-common
-    container_name: airflow_init
-    depends_on:
-      - postgres
-    command: >
-      bash -c "airflow db init && airflow users create --username admin --password admin --firstname admin --lastname admin --role Admin --email admin@example.com"

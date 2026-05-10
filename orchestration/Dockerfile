@@ -4,4 +4,4 @@ USER root
 RUN apt-get update && apt-get install -y python3
 
 USER airflow
-RUN pip install pendulum
+RUN pip install pendulum confluent-kafka niquests

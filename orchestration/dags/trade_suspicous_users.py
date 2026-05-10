@@ -1,10 +1,11 @@
 from airflow.decorators import dag, task
 import requests
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from data_ingestion.wallet_current_positions import analyze_multiple_wallets_positions
+from scripts.wallet_current_positions import analyze_multiple_wallets_positions
+from scripts.kafka_managerV2 import get_producer
 import pendulum
 
-@dag(start_date=pendulum.now("UTC"), schedule_interval="0 */3 * * *", catchup=False) # Cada tres horas se ejecutaría 'wallet_analysis_dag'
+@dag(start_date=pendulum.now("UTC"), schedule_interval="*/10 * * * *", catchup=False) # Cada tres horas se ejecutaría 'wallet_analysis_dag'
 def wallet_analysis_dag():
 
     @task
@@ -27,6 +28,11 @@ def wallet_analysis_dag():
         http_session.mount("http://", adapter)
         MAX_WORKERS = 20
         analyze_multiple_wallets_positions(http_session, wallet_addresses, max_workers=MAX_WORKERS)
+        if get_producer():
+            get_producer().flush()
+            print("\n[✓] All raw messages successfully flushed to Kafka.")
+        else:
+            print("FFFFFF")
 
     wallets = fetch_wallets()
     process_wallets(wallets)
