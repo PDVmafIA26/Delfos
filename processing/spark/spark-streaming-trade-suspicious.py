@@ -25,8 +25,11 @@ schema = ArrayType(StructType([
     StructField("proxyWallet", StringType()),
     StructField("asset", StringType()),
     StructField("size", DoubleType()),
+    StructField("initialValue", DoubleType()),
     StructField("title", StringType()),
     StructField("realizedPnl", DoubleType()),
+    StructField("icon", StringType()),
+    StructField("outcome", StringType()),
     StructField("endDate", StringType())
 ]))
 
@@ -57,6 +60,7 @@ df_final = (
         col("title").alias("market_title"),
         col("asset").alias("asset_id"),
         col("size").alias("size"),
+        col("initialValue").alias("initialValue"),
 
         when(
             col("end_date") > current_date(),
@@ -67,12 +71,14 @@ df_final = (
 
         col("realizedPnl").alias("realized_pnl"),
         col("proxyWallet").alias("wallet_address"),
-        col("end_date")
+        col("end_date"),
+        col("icon").alias("icon"),
+        col("outcome").alias("outcome")
     )
 )
 
 # 6. Send alert
-def send_message(wallet, title, size):
+def send_message(wallet, title, size, outcome, icon):
 
     url = "http://delfos-anomalies-notifier:8000/notify"
 
@@ -86,7 +92,9 @@ def send_message(wallet, title, size):
         "payload": {
             "wallet": str(wallet),
             "title": str(title),
-            "size": float(size or 0)
+            "size": float(size or 0),
+            "outcome": str(outcome),
+            "image_path": str(icon)
         },
         "timestamp": datetime.utcnow().isoformat()
     }
@@ -122,10 +130,12 @@ def upsert_batch_to_postgres(batch_df):
                 asset_id,
                 status,
                 realized_pnl,
+                icon,
+                outcome,
                 wallet_address,
                 notified
             )
-            VALUES (%s, %s, %s, %s, %s, FALSE)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, FALSE)
 
             ON CONFLICT (wallet_address, asset_id)
             DO UPDATE SET
@@ -136,7 +146,9 @@ def upsert_batch_to_postgres(batch_df):
             row["market_title"],
             row["asset_id"],
             row["status"],
-            row["size"],
+            row["initialValue"],
+            row["icon"],
+            row["outcome"],
             row["wallet_address"]
         ))
 
@@ -157,9 +169,9 @@ def process_notifications():
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT id, market_title, wallet_address, realized_pnl
+        SELECT id, market_title, wallet_address, realized_pnl, outcome, icon
         FROM trade_sospechosos
-        WHERE notified = FALSE
+        WHERE notified = FALSE AND status = 'open'
     """)
 
     rows = cursor.fetchall()
@@ -171,7 +183,9 @@ def process_notifications():
         send_message(
             wallet=row[2],
             title=row[1],
-            size=row[3] if row[3] else 0
+            size=row[3] if row[3] else 0,
+            outcome=row[4],
+            icon=row[5]
         )
 
         cursor.execute("""

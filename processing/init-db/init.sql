@@ -112,9 +112,11 @@ COMMENT ON TABLE top_wallets IS 'Posiciones grandes de wallets en mercados espec
 CREATE TABLE IF NOT EXISTS trade_sospechosos (
     id             BIGSERIAL PRIMARY KEY,
     market_title   TEXT,
-    asset_id       TEXT REFERENCES outcome_tokens(asset_id) ON DELETE SET NULL,
+    asset_id       TEXT,
     status         TEXT,
     realized_pnl   NUMERIC(20,4),
+    icon           TEXT,
+    outcome        TEXT,
     wallet_address TEXT REFERENCES usuarios(wallet_address) ON DELETE SET NULL,
     created_at     TIMESTAMPTZ DEFAULT NOW(),
     notified       BOOLEAN,

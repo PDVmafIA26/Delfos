@@ -10,6 +10,7 @@ class FlipAnomalyPayload(BaseModel):
     change: Literal["NO_TO_YES", "YES_TO_NO"]
     actual_price: float
     slug: str
+    image_path: Optional[str] = None
 
 
 class FlipAnomaly(BaseModel):
@@ -23,11 +24,14 @@ class SuspectUserPayload(BaseModel):
     wallet: str
     total_earned: float
     positions: int
+    image_path: Optional[str] = None
 
 class SuspectTradePayload(BaseModel):
     wallet: str
     title: str
     size: float
+    outcome: str
+    image_path: Optional[str] = None
 
 
 class SuspectUserAnomaly(BaseModel):
@@ -46,6 +50,7 @@ class SuspectTradeAnomaly(BaseModel):
 class Notification(BaseModel):
     text: str
     image_path: Optional[str] = None
+    is_url: Optional[bool] = False
     # If image_path exists, it is the path to the image to send with the text. Otherwise, only text is sent.
 
 
