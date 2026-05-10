@@ -7,6 +7,10 @@ from psycopg2.extras import execute_batch
 # Spark Session
 spark = SparkSession.builder \
     .appName("PolymarketStreaming") \
+    .config("spark.executor.cores", "1") \
+    .config("spark.executor.memory", "1g") \
+    .config("spark.driver.memory", "1g") \
+    .config("spark.sql.shuffle.partitions", "2") \
     .getOrCreate()
 
 spark.sparkContext.setLogLevel("WARN")
@@ -38,7 +42,8 @@ schema = StructType([
             StructField("volume1mo", DoubleType(), True),
             StructField("volume1yr", DoubleType(), True),
             StructField("outcomes", StringType(), True),
-            StructField("outcomePrices", StringType(), True)
+            StructField("outcomePrices", StringType(), True),
+            StructField("clobTokenIds", StringType(), True)
         ])
     ), True)
 ])
@@ -59,49 +64,6 @@ df = df.select(from_json(col("json"), schema).alias("data"))
 # Explode Markets
 df = df.select(col("data.*")).withColumn("market", explode("markets"))
 
-# events
-events_df = df.select(
-    col("id").alias("eventid"),
-    col("title").alias("question"),
-    col("slug"),
-    col("image"),
-    col("active"),
-    col("liquidity"),
-    col("volume"),
-    col("volume24hr"),
-    col("volume1wk"),
-    col("volume1mo"),
-    col("volume1yr")
-).dropDuplicates(["eventid"])
-
-# markets
-markets_df = df.select(
-    col("id").alias("eventid"),
-    col("market.id").alias("id"),
-    col("market.conditionId").alias("conditionid"),
-    col("market.slug"),
-    col("market.question"),
-    col("market.image"),
-    col("market.liquidity").cast("double"),
-    col("market.volume").cast("double"),
-    col("market.volume24hr"),
-    col("market.volume1wk"),
-    col("market.volume1mo"),
-    col("market.volume1yr")
-)
-
-# Outcome Tokens
-outcomes_df = df \
-    .withColumn("outcomes_array", from_json(col("market.outcomes"), ArrayType(StringType()))) \
-    .withColumn("prices_array", from_json(col("market.outcomePrices"), ArrayType(StringType()))) \
-    .withColumn("zipped", arrays_zip("outcomes_array", "prices_array")) \
-    .withColumn("exploded", explode("zipped")) \
-    .select(
-        col("market.conditionId").alias("condition_id"),
-        col("exploded.outcomes_array").alias("outcome_name"),
-        col("exploded.prices_array").cast("double").alias("price")
-    )
-
 # Write function
 def write_to_postgres(batch_df, batch_id):
     print(f"Batch {batch_id}")
@@ -109,50 +71,105 @@ def write_to_postgres(batch_df, batch_id):
     if batch_df.isEmpty():
         return
 
+    print(f"Batch {batch_id}")
+
+    # Explode markets
+    df = batch_df.withColumn("market", explode("markets"))
+
+    # Events
+    events_df = df.select(
+        col("id").alias("event_id"),
+        col("title").alias("question"),
+        col("slug"),
+        col("image"),
+        col("active"),
+        col("liquidity"),
+        col("volume"),
+        col("volume24hr").alias("volume_24hr"),
+        col("volume1wk").alias("volume_1w"),
+        col("volume1mo").alias("volume_1mo"),
+        col("volume1yr").alias("volume_1yr")
+    ).dropDuplicates(["event_id"])
+
+    # Markets
+    markets_df = df.select(
+        col("id").alias("event_id"),
+        col("market.id").alias("id"),
+        col("market.conditionId").alias("condition_id"),
+        col("market.slug"),
+        col("market.question"),
+        col("market.image"),
+        col("market.liquidity").cast("double").alias("liquidity"),
+        col("market.volume").cast("double").alias("volume"),
+        col("market.volume24hr").alias("volume_24hr"),
+        col("market.volume1wk").alias("volume_1w"),
+        col("market.volume1mo").alias("volume_1mo"),
+        col("market.volume1yr").alias("volume_1yr")
+    )
+
+    markets_df = markets_df.filter(col("condition_id").isNotNull() & (col("condition_id") != ""))
+
+    # Outcomes
+    outcomes_df = df \
+        .withColumn("outcomes_array", from_json(col("market.outcomes"), ArrayType(StringType()))) \
+        .withColumn("prices_array", from_json(col("market.outcomePrices"), ArrayType(StringType()))) \
+        .withColumn("tokens_array", from_json(col("market.clobTokenIds"), ArrayType(StringType()))) \
+        .withColumn("zipped", arrays_zip("outcomes_array", "prices_array", "tokens_array")) \
+        .withColumn("exploded", explode("zipped")) \
+    .select(
+        col("market.conditionId").alias("condition_id"),
+        col("exploded.outcomes_array").alias("outcome_name"),
+        col("exploded.prices_array").cast("double").alias("price"),
+        col("exploded.tokens_array").alias("asset_id")
+    )
+
     conn = psycopg2.connect(
         host="postgres",
         database="markets",
         user="postgres",
         password="postgres"
     )
+
     cursor = conn.cursor()
+
+    # inserts...
 
     # Events
     events = events_df.collect()
     execute_batch(cursor, """
         INSERT INTO eventos (
-            eventid, question, slug, image, active,
-            liquidity, volume, volume24h, volume1w, volume1mo, volume1yr
+            event_id, question, slug, image, active,
+            liquidity, volume, volume_24h, volume_1w, volume_1mo, volume_1yr
         )
         VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-        ON CONFLICT (eventid) DO UPDATE SET
+        ON CONFLICT (event_id) DO UPDATE SET
             question = EXCLUDED.question,
             liquidity = EXCLUDED.liquidity,
             volume = EXCLUDED.volume
     """, [
         (
-            r.eventid, r.question, r.slug, r.image, r.active,
-            r.liquidity, r.volume, r.volume24hr,
-            r.volume1wk, r.volume1mo, r.volume1yr
+            r.event_id, r.question, r.slug, r.image, r.active,
+            r.liquidity, r.volume, r.volume_24hr,
+            r.volume_1w, r.volume_1mo, r.volume_1yr
         ) for r in events
     ])
 
-    # Markets
+
     markets = markets_df.collect()
     execute_batch(cursor, """
         INSERT INTO mercados_master (
-            id, conditionid, slug, question, image,
-            liquidity, volume, volume24h, volume1w, volume1mo, volume1yr, eventid
+            id, condition_id, slug, question, image,
+            liquidity, volume, volume_24h, volume_1w, volume_1mo, volume_1yr, event_id
         )
         VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-        ON CONFLICT (id) DO UPDATE SET
+        ON CONFLICT (id, condition_id) DO UPDATE SET
             volume = EXCLUDED.volume,
             liquidity = EXCLUDED.liquidity
     """, [
         (
-            r.id, r.conditionid, r.slug, r.question, r.image,
-            r.liquidity, r.volume, r.volume24hr,
-            r.volume1wk, r.volume1mo, r.volume1yr, r.eventid
+            r.id, r.condition_id, r.slug, r.question, r.image,
+            r.liquidity, r.volume, r.volume_24hr,
+            r.volume_1w, r.volume_1mo, r.volume_1yr, r.event_id
         ) for r in markets
     ])
 
@@ -160,12 +177,17 @@ def write_to_postgres(batch_df, batch_id):
     outcomes = outcomes_df.collect()
     execute_batch(cursor, """
         INSERT INTO outcome_tokens (
-            condition_id, outcome_name, price
+            asset_id, condition_id, outcome_name, price
         )
-        VALUES (%s,%s,%s)
+        VALUES (%s,%s,%s,%s)
+        ON CONFLICT (asset_id) DO UPDATE SET
+            price = EXCLUDED.price
     """, [
         (
-            r.condition_id, r.outcome_name, r.price
+            r.asset_id,
+            r.condition_id,
+            r.outcome_name,
+            r.price
         ) for r in outcomes
     ])
 
