@@ -5,8 +5,8 @@ from typing import Dict, Any, List, Union
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Custom modules for pipeline integration
-from rate_limiter import RateLimiter
-from kafka_manager import get_producer
+from .rate_limiter import RateLimiter
+from .kafka_managerV2 import get_producer
 
 # API Endpoint for fetching current positions
 HISTORY_URL = "https://data-api.polymarket.com/positions"

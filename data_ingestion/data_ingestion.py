@@ -29,7 +29,9 @@ def main():
         )
 
         # Obtains conditions IDs from the markets
-        all_market_ids = market_mapping.keys()
+        all_market_ids = market_mapping
+        all_market_ids = dict(list(all_market_ids.items())[:1000])
+        all_market_ids = all_market_ids.keys()
         # Obtains all assets IDs from the markets
         all_assets_ids = [
             token for market in market_mapping.values() for token in market
@@ -39,22 +41,22 @@ def main():
         print(f"    - Total events saved: {len(collected_events)}")
 
         # Execute WebSocket in a separate thread to avoid blocking
-        websocket_thread = threading.Thread(
-            target=run_websocket, args=(all_assets_ids, stop_event)
-        )
-        websocket_thread.daemon = True
-        websocket_thread.start()
-        print("WebSocket ingestion started in background.")
+        # websocket_thread = threading.Thread(
+        #     target=run_websocket, args=(all_assets_ids, stop_event)
+        # )
+        # websocket_thread.daemon = True
+        # websocket_thread.start()
+        # print("WebSocket ingestion started in background.")
 
         print("Starting top wallets ingestion and analysis...")
         # Fetch top wallets concurrently while WebSocket streams
         wallet_data = run_top_wallets_ingestion(http_session, all_market_ids)
         # Analyze top wallets data
-        wallet_history_data = run_wallet_analysis_pipeline(http_session, wallet_data)
+        wallet_history_data = run_wallet_analysis_pipeline(http_session, wallet_data[:1000])
         get_producer().flush()
 
-        while websocket_thread.is_alive():
-            websocket_thread.join(timeout=1.0)
+        # while websocket_thread.is_alive():
+        #     websocket_thread.join(timeout=1.0)
 
     except KeyboardInterrupt:
         print("\nShutdown signal detected. Starting graceful shutdown...")
