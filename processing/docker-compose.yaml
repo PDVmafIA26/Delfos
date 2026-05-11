@@ -1,29 +1,4 @@
 services:
-
-  # NUEVA BASE DE DATOS
-  mongodb:
-    image: mongo:latest
-    container_name: mongodb
-    ports:
-      - "27017:27017"
-    environment:
-      - MONGO_INITDB_ROOT_USERNAME=admin
-      - MONGO_INITDB_ROOT_PASSWORD=administrador
-    volumes:
-      - ./datos_mongo:/data/db
-
-  # Panel de control visual para MongoDB (Puerto 8081)
-  mongo-express:
-    image: mongo-express
-    container_name: mongo-express
-    depends_on:
-      - mongodb
-    ports:
-      - "8081:8081"
-    environment:
-      - ME_CONFIG_MONGODB_ADMINUSERNAME=admin
-      - ME_CONFIG_MONGODB_ADMINPASSWORD=administrador
-      - ME_CONFIG_MONGODB_URL=mongodb://admin:administrador@mongodb:27017/
   
   spark-master:
     image: apache/spark:3.5.1
@@ -45,6 +20,7 @@ services:
   spark-streaming:
     image: apache/spark:3.5.1
     container_name: spark-streaming
+    restart: unless-stopped
     depends_on:
       - kafka
       - spark-master
@@ -55,6 +31,10 @@ services:
     command: >
       bash -c "pip install psycopg2-binary &&
       /opt/spark/bin/spark-submit
+      --total-executor-cores 2
+      --executor-cores 2
+      --conf spark.scheduler.mode=FAIR
+      --conf spark.sql.shuffle.partitions=4
       --conf spark.jars.ivy=/tmp/.ivy2
       --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1,org.postgresql:postgresql:42.7.3
       --master spark://spark-master:7077
@@ -62,6 +42,7 @@ services:
   spark-streaming-price-changes:
     image: apache/spark:3.5.1
     container_name: spark-price-changes
+    restart: unless-stopped
     depends_on:
       - kafka
       - spark-master
@@ -73,6 +54,10 @@ services:
     command: >
       bash -c "
       /opt/spark/bin/spark-submit
+      --total-executor-cores 2
+      --executor-cores 2
+      --conf spark.scheduler.mode=FAIR
+      --conf spark.sql.shuffle.partitions=4
       --conf spark.jars.ivy=/tmp/.ivy2
       --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1,org.postgresql:postgresql:42.7.3
       --master spark://spark-master:7077
@@ -82,6 +67,7 @@ services:
   spark-streaming-users:
     image: apache/spark:3.5.1
     container_name: spark-users
+    restart: unless-stopped
     depends_on:
       - kafka
       - spark-master
@@ -93,6 +79,10 @@ services:
     command: >
       bash -c "pip install psycopg2-binary &&
       /opt/spark/bin/spark-submit
+      --total-executor-cores 2
+      --executor-cores 2
+      --conf spark.scheduler.mode=FAIR
+      --conf spark.sql.shuffle.partitions=4
       --conf spark.jars.ivy=/tmp/.ivy2
       --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1,org.postgresql:postgresql:42.7.3
       --master spark://spark-master:7077
@@ -101,6 +91,7 @@ services:
   spark-streaming-suspicious:
     image: apache/spark:3.5.1
     container_name: spark-suspicious
+    restart: unless-stopped
     depends_on:
       - kafka
       - spark-master
@@ -112,28 +103,14 @@ services:
     command: >
       bash -c "pip install psycopg2-binary requests &&
       /opt/spark/bin/spark-submit
+      --total-executor-cores 2
+      --executor-cores 2
+      --conf spark.scheduler.mode=FAIR
+      --conf spark.sql.shuffle.partitions=4
       --conf spark.jars.ivy=/tmp/.ivy2
       --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1,org.postgresql:postgresql:42.7.3
       --master spark://spark-master:7077
       /app/spark-streaming-trade-suspicious.py"
-
-  spark-batch:
-    image: apache/spark:3.5.1
-    container_name: spark-batch
-    depends_on:
-      - spark-master
-      - postgres
-      - mongodb
-    volumes:
-      - ./spark:/app
-    environment:
-      - HOME=/tmp
-    command: >
-      /opt/spark/bin/spark-submit
-      --conf spark.jars.ivy=/tmp/.ivy2
-      --packages org.mongodb.spark:mongo-spark-connector_2.12:10.3.0,org.postgresql:postgresql:42.7.3
-      --master spark://spark-master:7077
-      /app/spark-batch.py
   
   postgres:
     image: postgres:15

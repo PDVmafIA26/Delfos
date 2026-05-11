@@ -12,10 +12,6 @@ import psycopg2
 # 1. Spark session
 spark = SparkSession.builder \
     .appName("Kafka_to_Trade_Sospechosos") \
-    .config("spark.executor.cores", "1") \
-    .config("spark.executor.memory", "1g") \
-    .config("spark.driver.memory", "1g") \
-    .config("spark.sql.shuffle.partitions", "2") \
     .getOrCreate()
 
 spark.sparkContext.setLogLevel("WARN")
