@@ -14,12 +14,11 @@ https://t.me/+mNquI5Ob4WNkNDRk
 ## Structure
 
 ```
-├── infrastructure/       # Docker Compose files, database init scripts
+├── bronze-layer/       
 ├── orchestration/        # Airflow DAGs
 ├── processing/           # PySpark scripts and ML anomaly models
-├── extraction/           # Polymarket data producers
+├── data_ingestion/       # Polymarket data producers
 ├── notifications/        # Telegram Bot integration
-├── requirements.txt      # Global Python dependencies
 └── README.md             # Project documentation
 ```
 
@@ -27,7 +26,8 @@ https://t.me/+mNquI5Ob4WNkNDRk
 
 To run this project locally, you must have the following installed on your machine:
 
--
+-Python 3
+-Docker engine
 
 ## Installation
 
