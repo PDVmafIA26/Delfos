@@ -5,7 +5,7 @@ import time
 import requests
 import websocket
 from markets import get_markets_info
-from kafka_manager import get_producer
+from kafka_managerV2 import get_producer
 
 # Basic logging configuration
 logging.basicConfig(

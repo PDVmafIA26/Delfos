@@ -1,7 +1,7 @@
 # from datetime import datetime, timezone
 import json
 import random
-from kafka_manager import get_producer
+from kafka_managerV2 import get_producer
 import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time

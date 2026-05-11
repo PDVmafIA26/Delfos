@@ -69,7 +69,7 @@ COMMENT ON TABLE outcome_tokens IS 'Tokens negociables por mercado. Price = prob
 -- Último precio ejecutado por trade
 CREATE TABLE IF NOT EXISTS last_trade_price (
     id         BIGSERIAL    PRIMARY KEY,
-    asset_id   TEXT         NOT NULL REFERENCES outcome_tokens(asset_id) ON DELETE CASCADE,
+    asset_id   TEXT,
     price      NUMERIC(10,6) NOT NULL,
     size       NUMERIC(20,4) NOT NULL,
     traded_at  TIMESTAMPTZ  DEFAULT NOW()

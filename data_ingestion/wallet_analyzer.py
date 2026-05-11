@@ -12,7 +12,7 @@ from typing import Dict, Any, List
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import random
-from kafka_manager import get_producer
+from kafka_managerV2 import get_producer
 from rate_limiter import RateLimiter
 
 HISTORY_URL = "https://data-api.polymarket.com/closed-positions"

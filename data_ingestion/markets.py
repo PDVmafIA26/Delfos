@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import os
-from kafka_manager import get_producer
+from kafka_managerV2 import get_producer
 
 # File name for caching category tag IDs
 TAGS_FILE = "categories_tags.json"

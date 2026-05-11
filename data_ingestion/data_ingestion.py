@@ -4,7 +4,7 @@ from top_wallets_processor import run_top_wallets_ingestion
 from websocket_ingestor import run_websocket
 import threading
 import requests
-from kafka_manager import get_producer
+from kafka_managerV2 import get_producer
 from wallet_analyzer import run_wallet_analysis_pipeline
 
 
@@ -41,12 +41,12 @@ def main():
         print(f"    - Total events saved: {len(collected_events)}")
 
         # Execute WebSocket in a separate thread to avoid blocking
-        # websocket_thread = threading.Thread(
-        #     target=run_websocket, args=(all_assets_ids, stop_event)
-        # )
-        # websocket_thread.daemon = True
-        # websocket_thread.start()
-        # print("WebSocket ingestion started in background.")
+        websocket_thread = threading.Thread(
+            target=run_websocket, args=(all_assets_ids, stop_event)
+        )
+        websocket_thread.daemon = True
+        websocket_thread.start()
+        print("WebSocket ingestion started in background.")
 
         print("Starting top wallets ingestion and analysis...")
         # Fetch top wallets concurrently while WebSocket streams
@@ -55,8 +55,8 @@ def main():
         wallet_history_data = run_wallet_analysis_pipeline(http_session, wallet_data[:1000])
         get_producer().flush()
 
-        # while websocket_thread.is_alive():
-        #     websocket_thread.join(timeout=1.0)
+        while websocket_thread.is_alive():
+            websocket_thread.join(timeout=1.0)
 
     except KeyboardInterrupt:
         print("\nShutdown signal detected. Starting graceful shutdown...")

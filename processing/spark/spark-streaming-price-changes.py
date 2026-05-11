@@ -59,16 +59,19 @@ flat = filtered.select(
 
 def write_to_postgres(batch_df, batch_id):
     print(f"Batch {batch_id}")
-    batch_df.show(truncate=False)
-    batch_df.write \
-        .format("jdbc") \
-        .option("url", "jdbc:postgresql://postgres:5432/markets") \
-        .option("dbtable", "last_trade_price") \
-        .option("user", "postgres") \
-        .option("password", "postgres") \
-        .option("driver", "org.postgresql.Driver") \
-        .mode("append") \
-        .save()
+    try:
+        batch_df.show(truncate=False)
+        batch_df.write \
+            .format("jdbc") \
+            .option("url", "jdbc:postgresql://postgres:5432/markets") \
+            .option("dbtable", "last_trade_price") \
+            .option("user", "postgres") \
+            .option("password", "postgres") \
+            .option("driver", "org.postgresql.Driver") \
+            .mode("append") \
+            .save()
+    except Exception as e:
+        print(f"An error has occurred: {e}")
 
 query = flat.writeStream \
     .foreachBatch(write_to_postgres) \
