@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS mercados_master (
 );
 
 -- Índice para búsquedas por condition_id (FK desde outcome_tokens)
-CREATE UNIQUE INDEX IF NOT EXISTS uq_mercados_condition_id ON mercados_master(condition_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_mercados_condition_id ON mercados_master(id, condition_id);
 
 COMMENT ON TABLE mercados_master IS 'Cada fila es un mercado/pregunta binaria dentro de un evento.';
 
@@ -318,3 +318,22 @@ CREATE TRIGGER trg_detect_flip
 
 COMMENT ON FUNCTION fn_detect_flip IS
   'FLIP: detecta cuando un mercado cruza la barrera 0.5 (cambia de opinión mayoritaria).';
+
+CREATE TABLE IF NOT EXISTS config (
+    key        TEXT PRIMARY KEY,
+    value      TEXT,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+INSERT INTO config (key, value) VALUES
+    ('reporting_url',         'http://delfos-anomalies-notifier:8000/notify'),
+    ('flip_threshold',        '0.5'),
+    ('spike_ratio_threshold', '5.0'),
+    ('price_var_threshold',   '0.20'),
+    ('whale_usd_threshold',   '50000'),
+    ('whale_impact_pct',      '2.0'),
+    ('flash_hours',           '48'),
+    ('notifications_enabled', 'true')
+ON CONFLICT (key) DO NOTHING;
+
+COMMENT ON TABLE config IS 'Parámetros ajustables del sistema de detección.';

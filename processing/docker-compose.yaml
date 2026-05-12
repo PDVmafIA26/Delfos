@@ -113,7 +113,7 @@ services:
       /app/spark-streaming-trade-suspicious.py"
   
   postgres:
-    image: postgres:15
+    build: .
     container_name: postgres
     environment:
       POSTGRES_DB: markets

@@ -31,9 +31,9 @@ from urllib3.util.retry import Retry
 # CONFIGURACIÓN
 # =============================================================================
 DB_CONFIG = {
-    "dbname":   os.getenv("POSTGRES_DB",       "delfos"),
+    "dbname":   os.getenv("POSTGRES_DB",       "markets"),
     "user":     os.getenv("POSTGRES_USER",     "postgres"),
-    "password": os.getenv("POSTGRES_PASSWORD", "delfos_pass"),
+    "password": os.getenv("POSTGRES_PASSWORD", "postgres"),
     "host":     os.getenv("POSTGRES_HOST",     "postgres"),
     "port":     os.getenv("POSTGRES_PORT",     "5432"),
 }
