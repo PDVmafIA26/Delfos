@@ -2,32 +2,40 @@ import json
 from confluent_kafka import Producer
 from typing import Any
 
+from logger import get_logger
+
+log = get_logger(__name__)
+
 
 class KafkaManager:
     def __init__(self, broker="localhost:9092"):
         self.config = {
-            # TODO: Update to production broker address before deploying
-            "bootstrap.servers": broker,  # Defaults to localhost:9092 (local development only)
-            "client.id": "polymarket-ingestor",  # Producer identifier in Kafka logs
-            "linger.ms": 10,  # Batch messages for up to 10ms to improve throughput
-            "compression.type": "snappy",  # Fast, lightweight batch compression
-            "acks": "all",  # Wait for all replicas to confirm before acknowledging
-            "retries": 5,  # Automatically retry failed sends up to 5 times
-            "enable.idempotence": True,  # Prevent duplicate messages on retry
+            "bootstrap.servers": broker,
+            "client.id": "polymarket-ingestor",
+            "linger.ms": 10,
+            "compression.type": "snappy",
+            "acks": "all",
+            "retries": 5,
+            "enable.idempotence": True,
         }
         try:
             self.producer = Producer(self.config)
-            print("Successfully connected to Kafka broker.")
+            log.info("Successfully connected to Kafka broker at '%s'", broker)
         except Exception as e:
-            print(f"Failed to connect to Kafka broker at '{broker}': {e}")
+            log.error("Failed to connect to Kafka broker at '%s': %s", broker, e)
             raise
 
     def _delivery_report(self, err, msg):
         """Callback invoked after each message is sent, whether successful or not."""
         if err is not None:
-            print(f"Failed to deliver message to topic '{msg.topic()}': {err}")
-        # else:
-        #     logger.debug(f"Message delivered to '{msg.topic()}' [partition {msg.partition()}]")
+            log.error(
+                "Failed to deliver message to topic '%s': %s", msg.topic(), err
+            )
+        else:
+            log.debug(
+                "Message delivered to '%s' [partition %d]",
+                msg.topic(), msg.partition()
+            )
 
     def send_data(
         self,
@@ -44,25 +52,18 @@ class KafkaManager:
         :param headers: Optional metadata headers as a list of (key, value) tuples
         """
         try:
-            # Serialize dictionary to bytes
             payload = json.dumps(data).encode("utf-8")
-
-            # Produce is asynchronous — delivery is confirmed via _delivery_report callback
             self.producer.produce(
                 topic=topic,
-                key=(
-                    str(key) if key else None
-                ),  # If no key, message goes to a random partition
+                key=str(key) if key else None,
                 value=payload,
                 callback=self._delivery_report,
                 headers=headers or [],
             )
-
-            # Trigger delivery callbacks without blocking
             self.producer.poll(0)
 
         except Exception as e:
-           print(f"Failed to produce message to topic '{topic}': {e}")
+            log.error("Failed to produce message to topic '%s': %s", topic, e)
 
     def flush(self):
         """Blocks until all pending messages have been delivered to Kafka."""
@@ -71,6 +72,7 @@ class KafkaManager:
 
 _producer: KafkaManager | None = None
 
+
 def get_producer() -> KafkaManager:
     """Returns the singleton KafkaManager instance, creating it if necessary."""
     global _producer
@@ -78,6 +80,6 @@ def get_producer() -> KafkaManager:
         try:
             _producer = KafkaManager()
         except Exception as e:
-            print(f"Kafka is unavailable. The ingestion pipeline cannot start: {e}")
+            log.error("Kafka is unavailable. The ingestion pipeline cannot start: %s", e)
             raise
     return _producer
