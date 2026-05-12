@@ -100,7 +100,7 @@ COMMENT ON TABLE usuarios IS 'Wallets de Polymarket. first_seen_at: primera vez 
 CREATE TABLE IF NOT EXISTS top_wallets (
     wallet_address TEXT         NOT NULL REFERENCES usuarios(wallet_address) ON DELETE CASCADE,
     condition_id   TEXT         NOT NULL REFERENCES mercados_master(condition_id) ON DELETE CASCADE,
-    asset_id       TEXT         REFERENCES outcome_tokens(asset_id) ON DELETE SET NULL,
+    asset_id       TEXT,
     amount         NUMERIC(20,4),
     recorded_at    TIMESTAMPTZ  DEFAULT NOW(),
     PRIMARY KEY (wallet_address, condition_id)
@@ -191,3 +191,130 @@ INSERT INTO config (key, value) VALUES
 ON CONFLICT (key) DO NOTHING;
 
 COMMENT ON TABLE config IS 'Parámetros ajustables del sistema de detección.';
+
+CREATE OR REPLACE FUNCTION fn_emit_anomaly(
+    p_category TEXT,
+    p_sub_type TEXT,
+    p_payload  JSONB
+) RETURNS UUID AS $$
+DECLARE
+    v_alert_id UUID;
+    v_full_payload JSONB;
+    v_notifications_enabled TEXT;
+BEGIN
+    SELECT value INTO v_notifications_enabled FROM config WHERE key = 'notifications_enabled';
+
+    -- Insertar en la tabla de anomalías
+    INSERT INTO anomalias (category, sub_type, payload)
+    VALUES (p_category, p_sub_type, p_payload)
+    RETURNING alert_id INTO v_alert_id;
+
+    -- Construir el payload completo con metadatos para Reportes
+    v_full_payload := jsonb_build_object(
+        'alert_id',  v_alert_id,
+        'category',  p_category,
+        'sub_type',  p_sub_type,
+        'payload',   p_payload,
+        'timestamp', to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+    );
+
+    -- Emitir notificación asíncrona
+    IF v_notifications_enabled IS DISTINCT FROM 'false' THEN
+        PERFORM pg_notify('anomaly_channel', v_full_payload::TEXT);
+    END IF;
+
+    RETURN v_alert_id;
+END;
+$$ LANGUAGE plpgsql;
+
+COMMENT ON FUNCTION fn_emit_anomaly IS
+  'Inserta en anomalias y emite pg_notify para que el listener Python haga el POST HTTP a Reportes.';
+
+
+-- =============================================================================
+-- DISPARADOR 1: FLIP DE PROBABILIDAD
+-- Se activa: INSERT en last_trade_price
+-- Lógica: si el sentimiento actual (precio >= 0.5 → SI, < 0.5 → NO) difiere
+--         del sentimiento histórico del batch → FLIP detectado
+-- =============================================================================
+CREATE OR REPLACE FUNCTION fn_detect_flip()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_prev_price   NUMERIC;
+    v_outcome      outcome_tokens%ROWTYPE;
+    v_market       mercados_master%ROWTYPE;
+    v_change       TEXT;
+    v_payload      JSONB;
+BEGIN
+    ----------------------------------------------------------------
+    -- Obtener el precio anterior inmediato para este asset
+    ----------------------------------------------------------------
+    SELECT l.price
+    INTO v_prev_price
+    FROM last_trade_price l
+    WHERE l.asset_id = NEW.asset_id
+    AND l.idautoincremental < NEW.idautoincremental
+    ORDER BY l.idautoincremental DESC
+    LIMIT 1;
+
+    -- Si no hay precio previo, no hacemos nada
+    IF v_prev_price IS NULL THEN
+        RETURN NEW;
+    END IF;
+
+    -- Detectar cruce de barrera 0.5
+    IF v_prev_price < 0.5 AND NEW.price >= 0.5 THEN
+        v_change := 'NO_TO_YES';
+
+    ELSIF v_prev_price >= 0.5 AND NEW.price < 0.5 THEN
+        v_change := 'YES_TO_NO';
+
+    ELSE
+        RETURN NEW;
+    END IF;
+
+    -- Obtener datos del outcome
+    SELECT *
+    INTO v_outcome
+    FROM outcome_tokens
+    WHERE asset_id = NEW.asset_id;
+
+    IF NOT FOUND THEN
+        RETURN NEW;
+    END IF;
+
+    -- Obtener datos del mercado
+    SELECT *
+    INTO v_market
+    FROM mercados_master
+    WHERE condition_id = v_outcome.condition_id
+    LIMIT 1;
+
+    -- Construir payload
+    v_payload := jsonb_build_object(
+        'question',       v_market.question,
+        'change',         v_change
+        'actual_price',   NEW.price,
+        'slug',           v_market.slug,
+        'image_path',     v_market.image
+    );
+
+    -- Emitir anomalía
+    PERFORM fn_emit_anomaly(
+        'MARKET',
+        'FLIP',
+        v_payload
+    );
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_detect_flip ON last_trade_price;
+CREATE TRIGGER trg_detect_flip
+    AFTER INSERT ON last_trade_price
+    FOR EACH ROW
+    EXECUTE FUNCTION fn_detect_flip();
+
+COMMENT ON FUNCTION fn_detect_flip IS
+  'FLIP: detecta cuando un mercado cruza la barrera 0.5 (cambia de opinión mayoritaria).';
