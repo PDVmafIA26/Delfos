@@ -42,8 +42,6 @@ schema = StructType([
 ])
 
 # 3. Read from Kafka
-# !!!!!
-# Tópico a confirmar con ingesta — nombre provisional
 df = spark.readStream \
     .format("kafka") \
     .option("kafka.bootstrap.servers", "localhost:9092") \
@@ -56,42 +54,38 @@ json_df = df.selectExpr("CAST(value AS STRING) as json")
 # 4. Parse JSON y filtrar solo eventos de tipo TRADE MATCHED
 parsed = json_df.select(from_json(col("json"), schema).alias("data"))
 
-trades = parsed \
-    .filter(col("data.type") == "TRADE") \
-    .filter(col("data.status") == "MATCHED")
 
 # 5. Extraer campos que corresponden a la tabla TOP_WALLETS
-# !!!! trade_owner se usa como wallet_address — pendiente confirmar con ingesta
-result = trades.select(
+result = parsed.select(
     col("data.trade_owner").alias("wallet_address"),
     col("data.market").alias("conditionId"),
     col("data.asset_id"),
-    (col("data.size").cast(DoubleType()) *
-     col("data.price").cast(DoubleType())).alias("amount")
+    col("data.size").cast(DoubleType()).alias("amount")
 )
 
 # 6. UPSERT to PostgreSQL
 def upsert_to_postgres(batch_df, batch_id):
     if batch_df.count() == 0:
         return
-
+ 
     batch_df.persist()
-
+ 
     url = "jdbc:postgresql://localhost:5432/markets"
     props = {
         "user": "postgres",
         "password": "postgres",
         "driver": "org.postgresql.Driver"
     }
-
+ 
     # Tabla staging (temporal)
+    # CREATE TABLE top_wallets_staging AS TABLE top_wallets WITH NO DATA;
     batch_df.write.jdbc(
         url=url,
         table="top_wallets_staging",
         mode="overwrite",
         properties=props
     )
-
+ 
     # Ejecutar UPSERT
     conn = psycopg2.connect(
         dbname="markets",
@@ -100,10 +94,9 @@ def upsert_to_postgres(batch_df, batch_id):
         host="localhost",
         port="5432"
     )
-
+ 
     cursor = conn.cursor()
-
-    # CREATE TABLE top_wallets_staging AS TABLE top_wallets WITH NO DATA;
+ 
     cursor.execute("""
         INSERT INTO top_wallets (wallet_address, "conditionId", asset_id, amount)
         SELECT wallet_address, "conditionId", asset_id, amount
@@ -113,17 +106,17 @@ def upsert_to_postgres(batch_df, batch_id):
             asset_id = EXCLUDED.asset_id,
             amount   = top_wallets.amount + EXCLUDED.amount
     """)
-
+ 
     conn.commit()
     cursor.close()
     conn.close()
-
+ 
     batch_df.unpersist()
-
+ 
 query = result.writeStream \
     .foreachBatch(upsert_to_postgres) \
     .outputMode("update") \
     .option("checkpointLocation", "/tmp/checkpoints/top_wallets_upsert") \
     .start()
-
+ 
 query.awaitTermination()
