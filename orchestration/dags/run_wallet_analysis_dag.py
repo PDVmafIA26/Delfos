@@ -17,7 +17,6 @@ def wallet_analysis_dag():
         
         hook = PostgresHook(postgres_conn_id="polymarket")
 
-        hook = PostgresHook(postgres_conn_id="polymarket")
         records = hook.get_records("""
             SELECT wallet_address
             FROM usuarios
