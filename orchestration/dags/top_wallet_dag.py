@@ -9,7 +9,7 @@ from scripts.top_wallets_processor import run_top_wallets_ingestion
     start_date=datetime(2026, 5, 10),
     schedule="0 */8 * * *",  # Cada 8 horas
     catchup=False,
-    tags=["top-wallets", "ingestion"],
+    tags=["top-wallets", "ingestion"]
 )
 def top_wallets_ingestion_dag():
 

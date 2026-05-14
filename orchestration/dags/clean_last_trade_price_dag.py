@@ -1,6 +1,6 @@
 from airflow.decorators import dag, task
 from datetime import datetime
-import psycopg2
+from airflow.providers.postgres.hooks.postgres import PostgresHook
 
 @dag(
     start_date=datetime(2026, 5, 10),
@@ -12,25 +12,11 @@ def clean_last_trade_price_dag():
 
     @task
     def clean_last_trade_price():
-        conn = psycopg2.connect(
-                dbname="markets",
-                user="postgrs",
-                password="postgres",
-                host="localhost",
-                port="5432"
-            )
-            
-        try:
-            cursor = conn.cursor()
-            cursor.execute("DELETE FROM last_trade_price;")
-            conn.commit()
-            print("Tabla limpiada correctamente.")
-        except Exception as e:
-            conn.rollback()
-            print("Error:", e)
-        finally:
-            cursor.close()
-        conn.close()
+        hook = PostgresHook(postgres_conn_id="polymarket")
+
+        hook.run("""
+            DELETE FROM top_wallets;
+        """)
         
     clean_last_trade_price()
 

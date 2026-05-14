@@ -133,7 +133,7 @@ def extract_unique_wallets(all_markets_top_wallets):
                 if address and address.startswith("0x"):
                     unique_wallets.add(address)
 
-    unique_file_name = "data_ingestion/unique_wallets_list.json"
+    unique_file_name = "unique_wallets_list.json"
     unique_data = {
         "total_unique_wallets": len(unique_wallets),
         "wallet_addresses": list(unique_wallets),

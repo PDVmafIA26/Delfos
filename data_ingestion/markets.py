@@ -5,13 +5,13 @@ import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import os
 
-from logger import get_logger
-from kafka_managerV2 import get_producer
+from .logger import get_logger
+from .kafka_managerV2 import get_producer
 
 log = get_logger(__name__)
 
 # File name for caching category tag IDs
-TAGS_FILE = "data_ingestion/categories_tags.json"
+TAGS_FILE = "categories_tags.json"
 
 
 def get_id_by_slug(session, tag_slug):
@@ -247,7 +247,39 @@ def obtain_event_data(http_session, category_tag):
 
     return total_market_mapping, all_collected_events
 
+def main():
+    CATEGORIES_TAG = ["politics", "geopolitics", "tech", "finance", "economy"]
 
+    http_session = requests.Session()
+    adapter = requests.adapters.HTTPAdapter(pool_connections=100, pool_maxsize=100)
+    http_session.mount("https://", adapter)
+    http_session.mount("http://", adapter)
+
+    if not os.path.exists(TAGS_FILE):
+        create_tag_file(http_session, CATEGORIES_TAG)
+
+    categories = read_tag_file()
+    ids_categories_exclude = []
+    all_collected_events = []
+    total_market_mapping = {}
+
+    for category in CATEGORIES_TAG:
+        mapping, events_data = get_markets_info(
+            session=http_session,
+            tag_slug=category,
+            ids_categories_exclude=ids_categories_exclude
+        )
+
+        total_market_mapping.update(mapping)
+        all_collected_events.extend(events_data)
+
+        if categories[category]:
+            ids_categories_exclude.append(categories[category])
+
+    http_session.close()
+
+    log.info("Process completed. Markets: %d | Events: %d",
+             len(total_market_mapping), len(all_collected_events))
 # ==========================================
 # MAIN EXECUTION BLOCK
 # ==========================================

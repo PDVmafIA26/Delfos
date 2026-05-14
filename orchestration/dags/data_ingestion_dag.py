@@ -1,6 +1,7 @@
 from airflow.decorators import dag, task
 from datetime import datetime
 import subprocess
+from scripts.data_ingestion import main
 
 
 @dag(
@@ -13,21 +14,7 @@ def data_ingestion_dag():
 
     @task
     def run_data_ingestion():
-        script_path = "/opt/airflow/scripts/data_ingestion.py"
-
-        result = subprocess.run(
-            ["python", script_path],
-            capture_output=True,
-            text=True)
-
-        if result.stderr:
-            print("STDERR:")
-            print(result.stderr)
-
-        if result.returncode != 0:
-            raise Exception(
-                f"Script failed with return code {result.returncode}"
-            )
+        main()
 
     run_data_ingestion()
 

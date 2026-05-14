@@ -1,0 +1,305 @@
+2026-05-13 23:16:54 | INFO     | MainThread | delfos.scripts.data_ingestion | === Delfos Data Ingestion — starting pipeline ===
+2026-05-13 23:16:54 | INFO     | MainThread | delfos.scripts.data_ingestion | Categories to ingest: ['politics', 'geopolitics', 'tech', 'finance', 'economy']
+2026-05-13 23:16:54 | INFO     | MainThread | delfos.scripts.markets | Creating cache file: data_ingestion/categories_tags.json
+2026-05-13 23:16:54 | INFO     | MainThread | delfos.scripts.markets | Fetching numeric ID for category 'politics'...
+2026-05-13 23:16:54 | INFO     | MainThread | delfos.scripts.markets | Numeric ID found for 'politics': 2
+2026-05-13 23:16:54 | INFO     | MainThread | delfos.scripts.markets | Fetching numeric ID for category 'geopolitics'...
+2026-05-13 23:16:55 | INFO     | MainThread | delfos.scripts.markets | Numeric ID found for 'geopolitics': 100265
+2026-05-13 23:16:55 | INFO     | MainThread | delfos.scripts.markets | Fetching numeric ID for category 'tech'...
+2026-05-13 23:16:55 | INFO     | MainThread | delfos.scripts.markets | Numeric ID found for 'tech': 1401
+2026-05-13 23:16:55 | INFO     | MainThread | delfos.scripts.markets | Fetching numeric ID for category 'finance'...
+2026-05-13 23:16:55 | INFO     | MainThread | delfos.scripts.markets | Numeric ID found for 'finance': 120
+2026-05-13 23:16:55 | INFO     | MainThread | delfos.scripts.markets | Fetching numeric ID for category 'economy'...
+2026-05-13 23:16:56 | INFO     | MainThread | delfos.scripts.markets | Numeric ID found for 'economy': 100328
+2026-05-13 23:16:56 | ERROR    | MainThread | delfos.scripts.data_ingestion | Unexpected error in main pipeline: [Errno 2] No such file or directory: 'data_ingestion/categories_tags.json'
+Traceback (most recent call last):
+  File "/opt/airflow/scripts/data_ingestion.py", line 33, in main
+    market_mapping, collected_events = obtain_event_data(
+                                       ^^^^^^^^^^^^^^^^^^
+  File "/opt/airflow/scripts/markets.py", line 227, in obtain_event_data
+    create_tag_file(http_session, category_tag)
+  File "/opt/airflow/scripts/markets.py", line 204, in create_tag_file
+    with open(TAGS_FILE, "w", encoding="utf-8") as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'data_ingestion/categories_tags.json'
+2026-05-13 23:16:56 | INFO     | MainThread | delfos.scripts.data_ingestion | Closing HTTP connections...
+2026-05-13 23:16:56 | INFO     | MainThread | delfos.scripts.data_ingestion | Flushing remaining Kafka messages...
+2026-05-13 23:16:56 | INFO     | MainThread | delfos.scripts.kafka_managerV2 | Successfully connected to Kafka broker at 'kafka:29092'
+2026-05-13 23:16:56 | INFO     | MainThread | delfos.scripts.data_ingestion | === Pipeline shutdown complete. Total time: 0 min 1.90 sec ===
+2026-05-13 23:19:30 | INFO     | MainThread | delfos.scripts.data_ingestion | === Delfos Data Ingestion — starting pipeline ===
+2026-05-13 23:19:30 | INFO     | MainThread | delfos.scripts.data_ingestion | Categories to ingest: ['politics', 'geopolitics', 'tech', 'finance', 'economy']
+2026-05-13 23:19:30 | INFO     | MainThread | delfos.scripts.markets | Creating cache file: categories_tags.json
+2026-05-13 23:19:30 | INFO     | MainThread | delfos.scripts.markets | Fetching numeric ID for category 'politics'...
+2026-05-13 23:19:31 | INFO     | MainThread | delfos.scripts.markets | Numeric ID found for 'politics': 2
+2026-05-13 23:19:31 | INFO     | MainThread | delfos.scripts.markets | Fetching numeric ID for category 'geopolitics'...
+2026-05-13 23:19:31 | INFO     | MainThread | delfos.scripts.markets | Numeric ID found for 'geopolitics': 100265
+2026-05-13 23:19:31 | INFO     | MainThread | delfos.scripts.markets | Fetching numeric ID for category 'tech'...
+2026-05-13 23:19:31 | INFO     | MainThread | delfos.scripts.markets | Numeric ID found for 'tech': 1401
+2026-05-13 23:19:31 | INFO     | MainThread | delfos.scripts.markets | Fetching numeric ID for category 'finance'...
+2026-05-13 23:19:31 | INFO     | MainThread | delfos.scripts.markets | Numeric ID found for 'finance': 120
+2026-05-13 23:19:31 | INFO     | MainThread | delfos.scripts.markets | Fetching numeric ID for category 'economy'...
+2026-05-13 23:19:31 | INFO     | MainThread | delfos.scripts.markets | Numeric ID found for 'economy': 100328
+2026-05-13 23:19:31 | INFO     | MainThread | delfos.scripts.markets | Tags file created successfully: categories_tags.json
+2026-05-13 23:19:31 | INFO     | MainThread | delfos.scripts.markets | Starting data extraction for tag: 'politics'
+2026-05-13 23:19:33 | INFO     | MainThread | delfos.scripts.markets | Page 1 processed: 100 events evaluated
+2026-05-13 23:19:33 | INFO     | MainThread | delfos.scripts.markets | Page 2 processed: 100 events evaluated
+2026-05-13 23:19:35 | INFO     | MainThread | delfos.scripts.markets | Page 3 processed: 100 events evaluated
+2026-05-13 23:19:38 | INFO     | MainThread | delfos.scripts.markets | Page 4 processed: 100 events evaluated
+2026-05-13 23:19:39 | INFO     | MainThread | delfos.scripts.markets | Page 5 processed: 100 events evaluated
+2026-05-13 23:19:39 | INFO     | MainThread | delfos.scripts.markets | Page 6 processed: 100 events evaluated
+2026-05-13 23:19:40 | INFO     | MainThread | delfos.scripts.markets | Page 7 processed: 100 events evaluated
+2026-05-13 23:19:41 | INFO     | MainThread | delfos.scripts.markets | Page 8 processed: 100 events evaluated
+2026-05-13 23:19:42 | INFO     | MainThread | delfos.scripts.markets | Page 9 processed: 100 events evaluated
+2026-05-13 23:19:42 | INFO     | MainThread | delfos.scripts.markets | Page 10 processed: 100 events evaluated
+2026-05-13 23:19:43 | INFO     | MainThread | delfos.scripts.markets | Page 11 processed: 100 events evaluated
+2026-05-13 23:19:44 | INFO     | MainThread | delfos.scripts.markets | Page 12 processed: 100 events evaluated
+2026-05-13 23:19:45 | INFO     | MainThread | delfos.scripts.markets | Page 13 processed: 100 events evaluated
+2026-05-13 23:19:46 | INFO     | MainThread | delfos.scripts.markets | Page 14 processed: 100 events evaluated
+2026-05-13 23:19:46 | INFO     | MainThread | delfos.scripts.markets | Page 15 processed: 73 events evaluated
+2026-05-13 23:19:46 | INFO     | MainThread | delfos.scripts.markets | Fetching 30952 order books for 'politics'...
+2026-05-13 23:19:46 | INFO     | MainThread | delfos.scripts.kafka_managerV2 | Successfully connected to Kafka broker at 'kafka:29092'
+2026-05-13 23:19:49 | INFO     | MainThread | delfos.scripts.markets | Extraction complete for 'politics'. Total markets mapped: 16033
+2026-05-13 23:19:49 | INFO     | MainThread | delfos.scripts.markets | Starting data extraction for tag: 'geopolitics'
+2026-05-13 23:19:50 | INFO     | MainThread | delfos.scripts.markets | Page 1 processed: 100 events evaluated
+2026-05-13 23:19:50 | INFO     | MainThread | delfos.scripts.markets | Page 2 processed: 3 events evaluated
+2026-05-13 23:19:50 | INFO     | MainThread | delfos.scripts.markets | Fetching 380 order books for 'geopolitics'...
+2026-05-13 23:19:50 | INFO     | MainThread | delfos.scripts.markets | Extraction complete for 'geopolitics'. Total markets mapped: 278
+2026-05-13 23:19:50 | INFO     | MainThread | delfos.scripts.markets | Starting data extraction for tag: 'tech'
+2026-05-13 23:19:51 | INFO     | MainThread | delfos.scripts.markets | Page 1 processed: 100 events evaluated
+2026-05-13 23:19:52 | INFO     | MainThread | delfos.scripts.markets | Page 2 processed: 100 events evaluated
+2026-05-13 23:19:52 | INFO     | MainThread | delfos.scripts.markets | Page 3 processed: 5 events evaluated
+2026-05-13 23:19:52 | INFO     | MainThread | delfos.scripts.markets | Fetching 2992 order books for 'tech'...
+2026-05-13 23:19:53 | INFO     | MainThread | delfos.scripts.markets | Extraction complete for 'tech'. Total markets mapped: 1599
+2026-05-13 23:19:53 | INFO     | MainThread | delfos.scripts.markets | Starting data extraction for tag: 'finance'
+2026-05-13 23:19:53 | INFO     | MainThread | delfos.scripts.markets | Page 1 processed: 100 events evaluated
+2026-05-13 23:19:54 | INFO     | MainThread | delfos.scripts.markets | Page 2 processed: 87 events evaluated
+2026-05-13 23:19:54 | INFO     | MainThread | delfos.scripts.markets | Fetching 2356 order books for 'finance'...
+2026-05-13 23:19:54 | INFO     | MainThread | delfos.scripts.markets | Extraction complete for 'finance'. Total markets mapped: 1409
+2026-05-13 23:19:54 | INFO     | MainThread | delfos.scripts.markets | Starting data extraction for tag: 'economy'
+2026-05-13 23:19:55 | INFO     | MainThread | delfos.scripts.markets | Page 1 processed: 87 events evaluated
+2026-05-13 23:19:55 | INFO     | MainThread | delfos.scripts.markets | Fetching 984 order books for 'economy'...
+2026-05-13 23:19:55 | INFO     | MainThread | delfos.scripts.markets | Extraction complete for 'economy'. Total markets mapped: 504
+2026-05-13 23:19:55 | INFO     | MainThread | delfos.scripts.data_ingestion | Total markets mapped: 19823
+2026-05-13 23:19:55 | INFO     | MainThread | delfos.scripts.data_ingestion | Total events saved: 2055
+2026-05-13 23:19:55 | INFO     | MainThread | delfos.scripts.data_ingestion | WebSocket ingestion started in background
+2026-05-13 23:19:55 | INFO     | MainThread | delfos.scripts.data_ingestion | Starting top wallets ingestion and analysis...
+2026-05-13 23:19:55 | INFO     | MainThread | delfos.scripts.top_wallets_processor | Starting top wallets ingestion for 1000 markets (workers=10)
+2026-05-13 23:20:41 | INFO     | MainThread | delfos.scripts.top_wallets_processor | Top wallets ingestion complete. Processed 1000 markets.
+2026-05-13 23:20:41 | ERROR    | MainThread | delfos.scripts.data_ingestion | Unexpected error in main pipeline: [Errno 2] No such file or directory: 'data_ingestion/unique_wallets_list.json'
+Traceback (most recent call last):
+  File "/opt/airflow/scripts/data_ingestion.py", line 55, in main
+    wallet_data = run_top_wallets_ingestion(http_session, all_market_ids)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/airflow/scripts/top_wallets_processor.py", line 119, in run_top_wallets_ingestion
+    return extract_unique_wallets(all_wallets)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/airflow/scripts/top_wallets_processor.py", line 142, in extract_unique_wallets
+    with open(unique_file_name, "w", encoding="utf-8") as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'data_ingestion/unique_wallets_list.json'
+2026-05-13 23:20:41 | INFO     | MainThread | delfos.scripts.data_ingestion | Closing HTTP connections...
+2026-05-13 23:20:46 | INFO     | MainThread | delfos.scripts.data_ingestion | Flushing remaining Kafka messages...
+2026-05-13 23:20:46 | INFO     | MainThread | delfos.scripts.data_ingestion | === Pipeline shutdown complete. Total time: 1 min 16.20 sec ===
+2026-05-13 23:23:33 | INFO     | MainThread | delfos.scripts.data_ingestion | === Delfos Data Ingestion — starting pipeline ===
+2026-05-13 23:23:33 | INFO     | MainThread | delfos.scripts.data_ingestion | Categories to ingest: ['politics', 'geopolitics', 'tech', 'finance', 'economy']
+2026-05-13 23:23:33 | INFO     | MainThread | delfos.scripts.markets | Starting data extraction for tag: 'politics'
+2026-05-13 23:23:34 | INFO     | MainThread | delfos.scripts.markets | Page 1 processed: 100 events evaluated
+2026-05-13 23:23:35 | INFO     | MainThread | delfos.scripts.markets | Page 2 processed: 100 events evaluated
+2026-05-13 23:23:36 | INFO     | MainThread | delfos.scripts.markets | Page 3 processed: 100 events evaluated
+2026-05-13 23:23:39 | INFO     | MainThread | delfos.scripts.markets | Page 4 processed: 100 events evaluated
+2026-05-13 23:23:40 | INFO     | MainThread | delfos.scripts.markets | Page 5 processed: 100 events evaluated
+2026-05-13 23:23:40 | INFO     | MainThread | delfos.scripts.markets | Page 6 processed: 100 events evaluated
+2026-05-13 23:23:41 | INFO     | MainThread | delfos.scripts.markets | Page 7 processed: 100 events evaluated
+2026-05-13 23:23:42 | INFO     | MainThread | delfos.scripts.markets | Page 8 processed: 100 events evaluated
+2026-05-13 23:23:42 | INFO     | MainThread | delfos.scripts.markets | Page 9 processed: 100 events evaluated
+2026-05-13 23:23:43 | INFO     | MainThread | delfos.scripts.markets | Page 10 processed: 100 events evaluated
+2026-05-13 23:23:48 | INFO     | MainThread | delfos.scripts.markets | Page 11 processed: 100 events evaluated
+2026-05-13 23:23:48 | INFO     | MainThread | delfos.scripts.markets | Page 12 processed: 100 events evaluated
+2026-05-13 23:23:50 | INFO     | MainThread | delfos.scripts.markets | Page 13 processed: 100 events evaluated
+2026-05-13 23:23:50 | INFO     | MainThread | delfos.scripts.markets | Page 14 processed: 100 events evaluated
+2026-05-13 23:23:51 | INFO     | MainThread | delfos.scripts.markets | Page 15 processed: 73 events evaluated
+2026-05-13 23:23:51 | INFO     | MainThread | delfos.scripts.markets | Fetching 30952 order books for 'politics'...
+2026-05-13 23:23:51 | INFO     | MainThread | delfos.scripts.kafka_managerV2 | Successfully connected to Kafka broker at 'kafka:29092'
+2026-05-13 23:23:53 | INFO     | MainThread | delfos.scripts.markets | Extraction complete for 'politics'. Total markets mapped: 16033
+2026-05-13 23:23:53 | INFO     | MainThread | delfos.scripts.markets | Starting data extraction for tag: 'geopolitics'
+2026-05-13 23:23:53 | INFO     | MainThread | delfos.scripts.markets | Page 1 processed: 100 events evaluated
+2026-05-13 23:23:53 | INFO     | MainThread | delfos.scripts.markets | Page 2 processed: 3 events evaluated
+2026-05-13 23:23:53 | INFO     | MainThread | delfos.scripts.markets | Fetching 380 order books for 'geopolitics'...
+2026-05-13 23:23:53 | INFO     | MainThread | delfos.scripts.markets | Extraction complete for 'geopolitics'. Total markets mapped: 278
+2026-05-13 23:23:53 | INFO     | MainThread | delfos.scripts.markets | Starting data extraction for tag: 'tech'
+2026-05-13 23:23:53 | INFO     | MainThread | delfos.scripts.markets | Page 1 processed: 100 events evaluated
+2026-05-13 23:23:54 | INFO     | MainThread | delfos.scripts.markets | Page 2 processed: 100 events evaluated
+2026-05-13 23:23:54 | INFO     | MainThread | delfos.scripts.markets | Page 3 processed: 5 events evaluated
+2026-05-13 23:23:54 | INFO     | MainThread | delfos.scripts.markets | Fetching 2992 order books for 'tech'...
+2026-05-13 23:23:54 | INFO     | MainThread | delfos.scripts.markets | Extraction complete for 'tech'. Total markets mapped: 1599
+2026-05-13 23:23:54 | INFO     | MainThread | delfos.scripts.markets | Starting data extraction for tag: 'finance'
+2026-05-13 23:23:55 | INFO     | MainThread | delfos.scripts.markets | Page 1 processed: 100 events evaluated
+2026-05-13 23:23:55 | INFO     | MainThread | delfos.scripts.markets | Page 2 processed: 87 events evaluated
+2026-05-13 23:23:55 | INFO     | MainThread | delfos.scripts.markets | Fetching 2356 order books for 'finance'...
+2026-05-13 23:23:55 | INFO     | MainThread | delfos.scripts.markets | Extraction complete for 'finance'. Total markets mapped: 1409
+2026-05-13 23:23:55 | INFO     | MainThread | delfos.scripts.markets | Starting data extraction for tag: 'economy'
+2026-05-13 23:23:55 | INFO     | MainThread | delfos.scripts.markets | Page 1 processed: 87 events evaluated
+2026-05-13 23:23:55 | INFO     | MainThread | delfos.scripts.markets | Fetching 984 order books for 'economy'...
+2026-05-13 23:23:55 | INFO     | MainThread | delfos.scripts.markets | Extraction complete for 'economy'. Total markets mapped: 504
+2026-05-13 23:23:55 | INFO     | MainThread | delfos.scripts.data_ingestion | Total markets mapped: 19823
+2026-05-13 23:23:55 | INFO     | MainThread | delfos.scripts.data_ingestion | Total events saved: 2055
+2026-05-13 23:23:55 | INFO     | MainThread | delfos.scripts.data_ingestion | WebSocket ingestion started in background
+2026-05-13 23:23:55 | INFO     | MainThread | delfos.scripts.data_ingestion | Starting top wallets ingestion and analysis...
+2026-05-13 23:23:55 | INFO     | MainThread | delfos.scripts.top_wallets_processor | Starting top wallets ingestion for 1000 markets (workers=10)
+2026-05-13 23:24:13 | INFO     | MainThread | delfos.scripts.top_wallets_processor | Top wallets ingestion complete. Processed 1000 markets.
+2026-05-13 23:24:14 | INFO     | MainThread | delfos.scripts.top_wallets_processor | Unique wallets saved to 'unique_wallets_list.json'. Total: 2348
+2026-05-13 23:24:14 | INFO     | MainThread | delfos.scripts.wallet_analyzer | === Wallet Analyzer Pipeline ===
+2026-05-13 23:24:14 | INFO     | MainThread | delfos.scripts.wallet_analyzer | Fetching trading history for 1000 wallets (workers=7)
+2026-05-13 23:25:33 | INFO     | MainThread | delfos.scripts.wallet_analyzer | Wallet analysis complete. 1000/1000 processed.
+2026-05-13 23:36:30 | INFO     | MainThread | delfos.scripts.data_ingestion | Closing HTTP connections...
+2026-05-13 23:36:30 | INFO     | MainThread | delfos.scripts.data_ingestion | Flushing remaining Kafka messages...
+2026-05-13 23:36:31 | INFO     | MainThread | delfos.scripts.data_ingestion | === Pipeline shutdown complete. Total time: 12 min 58.02 sec ===
+2026-05-13 23:43:10 | INFO     | MainThread | delfos.scripts.markets | Creating cache file: categories_tags.json
+2026-05-13 23:43:10 | INFO     | MainThread | delfos.scripts.markets | Fetching numeric ID for category 'politics'...
+2026-05-13 23:43:13 | INFO     | MainThread | delfos.scripts.markets | Numeric ID found for 'politics': 2
+2026-05-13 23:43:13 | INFO     | MainThread | delfos.scripts.markets | Fetching numeric ID for category 'geopolitics'...
+2026-05-13 23:43:14 | INFO     | MainThread | delfos.scripts.markets | Numeric ID found for 'geopolitics': 100265
+2026-05-13 23:43:14 | INFO     | MainThread | delfos.scripts.markets | Fetching numeric ID for category 'tech'...
+2026-05-13 23:43:14 | INFO     | MainThread | delfos.scripts.markets | Numeric ID found for 'tech': 1401
+2026-05-13 23:43:14 | INFO     | MainThread | delfos.scripts.markets | Fetching numeric ID for category 'finance'...
+2026-05-13 23:43:15 | INFO     | MainThread | delfos.scripts.markets | Numeric ID found for 'finance': 120
+2026-05-13 23:43:15 | INFO     | MainThread | delfos.scripts.markets | Fetching numeric ID for category 'economy'...
+2026-05-13 23:43:15 | INFO     | MainThread | delfos.scripts.markets | Numeric ID found for 'economy': 100328
+2026-05-13 23:43:15 | INFO     | MainThread | delfos.scripts.markets | Tags file created successfully: categories_tags.json
+2026-05-13 23:43:15 | INFO     | MainThread | delfos.scripts.markets | Starting data extraction for tag: 'politics'
+2026-05-13 23:43:17 | INFO     | MainThread | delfos.scripts.markets | Page 1 processed: 100 events evaluated
+2026-05-13 23:43:17 | INFO     | MainThread | delfos.scripts.markets | Page 2 processed: 100 events evaluated
+2026-05-13 23:43:18 | INFO     | MainThread | delfos.scripts.markets | Page 3 processed: 100 events evaluated
+2026-05-13 23:43:19 | INFO     | MainThread | delfos.scripts.markets | Page 4 processed: 100 events evaluated
+2026-05-13 23:43:20 | INFO     | MainThread | delfos.scripts.markets | Page 5 processed: 100 events evaluated
+2026-05-13 23:43:21 | INFO     | MainThread | delfos.scripts.markets | Page 6 processed: 100 events evaluated
+2026-05-13 23:43:23 | INFO     | MainThread | delfos.scripts.markets | Page 7 processed: 100 events evaluated
+2026-05-13 23:43:23 | INFO     | MainThread | delfos.scripts.markets | Page 8 processed: 100 events evaluated
+2026-05-13 23:43:24 | INFO     | MainThread | delfos.scripts.markets | Page 9 processed: 100 events evaluated
+2026-05-13 23:43:24 | INFO     | MainThread | delfos.scripts.markets | Page 10 processed: 100 events evaluated
+2026-05-13 23:43:25 | INFO     | MainThread | delfos.scripts.markets | Page 11 processed: 100 events evaluated
+2026-05-13 23:43:26 | INFO     | MainThread | delfos.scripts.markets | Page 12 processed: 100 events evaluated
+2026-05-13 23:43:27 | INFO     | MainThread | delfos.scripts.markets | Page 13 processed: 100 events evaluated
+2026-05-13 23:43:28 | INFO     | MainThread | delfos.scripts.markets | Page 14 processed: 100 events evaluated
+2026-05-13 23:43:29 | INFO     | MainThread | delfos.scripts.markets | Page 15 processed: 73 events evaluated
+2026-05-13 23:43:29 | INFO     | MainThread | delfos.scripts.markets | Fetching 30952 order books for 'politics'...
+2026-05-13 23:43:29 | INFO     | MainThread | delfos.scripts.kafka_managerV2 | Successfully connected to Kafka broker at 'kafka:29092'
+2026-05-13 23:43:32 | INFO     | MainThread | delfos.scripts.markets | Extraction complete for 'politics'. Total markets mapped: 16033
+2026-05-13 23:43:32 | INFO     | MainThread | delfos.scripts.markets | Starting data extraction for tag: 'geopolitics'
+2026-05-13 23:43:32 | INFO     | MainThread | delfos.scripts.markets | Page 1 processed: 100 events evaluated
+2026-05-13 23:43:32 | INFO     | MainThread | delfos.scripts.markets | Page 2 processed: 3 events evaluated
+2026-05-13 23:43:32 | INFO     | MainThread | delfos.scripts.markets | Fetching 380 order books for 'geopolitics'...
+2026-05-13 23:43:32 | INFO     | MainThread | delfos.scripts.markets | Extraction complete for 'geopolitics'. Total markets mapped: 278
+2026-05-13 23:43:32 | INFO     | MainThread | delfos.scripts.markets | Starting data extraction for tag: 'tech'
+2026-05-13 23:43:33 | INFO     | MainThread | delfos.scripts.markets | Page 1 processed: 100 events evaluated
+2026-05-13 23:43:37 | INFO     | MainThread | delfos.scripts.markets | Page 2 processed: 100 events evaluated
+2026-05-13 23:43:37 | INFO     | MainThread | delfos.scripts.markets | Page 3 processed: 5 events evaluated
+2026-05-13 23:43:38 | INFO     | MainThread | delfos.scripts.markets | Fetching 2992 order books for 'tech'...
+2026-05-13 23:43:38 | INFO     | MainThread | delfos.scripts.markets | Extraction complete for 'tech'. Total markets mapped: 1599
+2026-05-13 23:43:38 | INFO     | MainThread | delfos.scripts.markets | Starting data extraction for tag: 'finance'
+2026-05-13 23:43:40 | INFO     | MainThread | delfos.scripts.markets | Page 1 processed: 100 events evaluated
+2026-05-13 23:43:40 | INFO     | MainThread | delfos.scripts.markets | Page 2 processed: 82 events evaluated
+2026-05-13 23:43:40 | INFO     | MainThread | delfos.scripts.markets | Fetching 2338 order books for 'finance'...
+2026-05-13 23:43:41 | INFO     | MainThread | delfos.scripts.markets | Extraction complete for 'finance'. Total markets mapped: 1404
+2026-05-13 23:43:41 | INFO     | MainThread | delfos.scripts.markets | Starting data extraction for tag: 'economy'
+2026-05-13 23:43:41 | INFO     | MainThread | delfos.scripts.markets | Page 1 processed: 87 events evaluated
+2026-05-13 23:43:41 | INFO     | MainThread | delfos.scripts.markets | Fetching 984 order books for 'economy'...
+2026-05-13 23:43:41 | INFO     | MainThread | delfos.scripts.markets | Extraction complete for 'economy'. Total markets mapped: 504
+2026-05-13 23:43:41 | INFO     | MainThread | delfos.scripts.markets | Process completed. Markets: 19818 | Events: 2050
+2026-05-13 23:44:32 | INFO     | MainThread | delfos.scripts.data_ingestion | === Delfos Data Ingestion — starting pipeline ===
+2026-05-13 23:44:32 | INFO     | MainThread | delfos.scripts.data_ingestion | Categories to ingest: ['politics', 'geopolitics', 'tech', 'finance', 'economy']
+2026-05-13 23:44:32 | INFO     | MainThread | delfos.scripts.markets | Starting data extraction for tag: 'politics'
+2026-05-13 23:44:33 | INFO     | MainThread | delfos.scripts.markets | Page 1 processed: 100 events evaluated
+2026-05-13 23:44:33 | INFO     | MainThread | delfos.scripts.markets | Page 2 processed: 100 events evaluated
+2026-05-13 23:44:38 | INFO     | MainThread | delfos.scripts.markets | Page 3 processed: 100 events evaluated
+2026-05-13 23:44:39 | INFO     | MainThread | delfos.scripts.markets | Page 4 processed: 100 events evaluated
+2026-05-13 23:44:40 | INFO     | MainThread | delfos.scripts.markets | Page 5 processed: 100 events evaluated
+2026-05-13 23:44:40 | INFO     | MainThread | delfos.scripts.markets | Page 6 processed: 100 events evaluated
+2026-05-13 23:44:41 | INFO     | MainThread | delfos.scripts.markets | Page 7 processed: 100 events evaluated
+2026-05-13 23:44:41 | INFO     | MainThread | delfos.scripts.markets | Page 8 processed: 100 events evaluated
+2026-05-13 23:44:42 | INFO     | MainThread | delfos.scripts.markets | Page 9 processed: 100 events evaluated
+2026-05-13 23:44:42 | INFO     | MainThread | delfos.scripts.markets | Page 10 processed: 100 events evaluated
+2026-05-13 23:44:43 | INFO     | MainThread | delfos.scripts.markets | Page 11 processed: 100 events evaluated
+2026-05-13 23:44:43 | INFO     | MainThread | delfos.scripts.markets | Page 12 processed: 100 events evaluated
+2026-05-13 23:44:44 | INFO     | MainThread | delfos.scripts.markets | Page 13 processed: 100 events evaluated
+2026-05-13 23:44:44 | INFO     | MainThread | delfos.scripts.markets | Page 14 processed: 100 events evaluated
+2026-05-13 23:44:44 | INFO     | MainThread | delfos.scripts.markets | Page 15 processed: 73 events evaluated
+2026-05-13 23:44:44 | INFO     | MainThread | delfos.scripts.markets | Fetching 30952 order books for 'politics'...
+2026-05-13 23:44:44 | INFO     | MainThread | delfos.scripts.kafka_managerV2 | Successfully connected to Kafka broker at 'kafka:29092'
+2026-05-13 23:44:45 | INFO     | MainThread | delfos.scripts.markets | Extraction complete for 'politics'. Total markets mapped: 16033
+2026-05-13 23:44:45 | INFO     | MainThread | delfos.scripts.markets | Starting data extraction for tag: 'geopolitics'
+2026-05-13 23:44:46 | INFO     | MainThread | delfos.scripts.markets | Page 1 processed: 100 events evaluated
+2026-05-13 23:44:46 | INFO     | MainThread | delfos.scripts.markets | Page 2 processed: 3 events evaluated
+2026-05-13 23:44:46 | INFO     | MainThread | delfos.scripts.markets | Fetching 380 order books for 'geopolitics'...
+2026-05-13 23:44:47 | INFO     | MainThread | delfos.scripts.markets | Extraction complete for 'geopolitics'. Total markets mapped: 278
+2026-05-13 23:44:47 | INFO     | MainThread | delfos.scripts.markets | Starting data extraction for tag: 'tech'
+2026-05-13 23:44:47 | INFO     | MainThread | delfos.scripts.markets | Page 1 processed: 100 events evaluated
+2026-05-13 23:44:48 | INFO     | MainThread | delfos.scripts.markets | Page 2 processed: 100 events evaluated
+2026-05-13 23:44:48 | INFO     | MainThread | delfos.scripts.markets | Page 3 processed: 5 events evaluated
+2026-05-13 23:44:48 | INFO     | MainThread | delfos.scripts.markets | Fetching 2992 order books for 'tech'...
+2026-05-13 23:44:48 | INFO     | MainThread | delfos.scripts.markets | Extraction complete for 'tech'. Total markets mapped: 1599
+2026-05-13 23:44:48 | INFO     | MainThread | delfos.scripts.markets | Starting data extraction for tag: 'finance'
+2026-05-13 23:44:48 | INFO     | MainThread | delfos.scripts.markets | Page 1 processed: 100 events evaluated
+2026-05-13 23:44:49 | INFO     | MainThread | delfos.scripts.markets | Page 2 processed: 82 events evaluated
+2026-05-13 23:44:49 | INFO     | MainThread | delfos.scripts.markets | Fetching 2338 order books for 'finance'...
+2026-05-13 23:44:49 | INFO     | MainThread | delfos.scripts.markets | Extraction complete for 'finance'. Total markets mapped: 1404
+2026-05-13 23:44:49 | INFO     | MainThread | delfos.scripts.markets | Starting data extraction for tag: 'economy'
+2026-05-13 23:44:49 | INFO     | MainThread | delfos.scripts.markets | Page 1 processed: 87 events evaluated
+2026-05-13 23:44:49 | INFO     | MainThread | delfos.scripts.markets | Fetching 984 order books for 'economy'...
+2026-05-13 23:44:49 | INFO     | MainThread | delfos.scripts.markets | Extraction complete for 'economy'. Total markets mapped: 504
+2026-05-13 23:44:49 | INFO     | MainThread | delfos.scripts.data_ingestion | Total markets mapped: 19818
+2026-05-13 23:44:49 | INFO     | MainThread | delfos.scripts.data_ingestion | Total events saved: 2050
+2026-05-13 23:44:49 | INFO     | MainThread | delfos.scripts.data_ingestion | Starting top wallets ingestion and analysis...
+2026-05-13 23:44:49 | INFO     | MainThread | delfos.scripts.top_wallets_processor | Starting top wallets ingestion for 1000 markets (workers=10)
+2026-05-13 23:45:06 | INFO     | MainThread | delfos.scripts.top_wallets_processor | Top wallets ingestion complete. Processed 1000 markets.
+2026-05-13 23:45:06 | INFO     | MainThread | delfos.scripts.top_wallets_processor | Unique wallets saved to 'unique_wallets_list.json'. Total: 2345
+2026-05-13 23:45:06 | INFO     | MainThread | delfos.scripts.wallet_analyzer | === Wallet Analyzer Pipeline ===
+2026-05-13 23:45:06 | INFO     | MainThread | delfos.scripts.wallet_analyzer | Fetching trading history for 1000 wallets (workers=7)
+2026-05-13 23:45:28 | INFO     | MainThread | delfos.scripts.top_wallets_processor | Starting top wallets ingestion for 2007 markets (workers=20)
+2026-05-13 23:45:30 | INFO     | ThreadPoolExecutor-0_9 | delfos.scripts.kafka_managerV2 | Successfully connected to Kafka broker at 'kafka:29092'
+2026-05-13 23:45:31 | INFO     | ThreadPoolExecutor-0_2 | delfos.scripts.kafka_managerV2 | Successfully connected to Kafka broker at 'kafka:29092'
+2026-05-13 23:45:31 | INFO     | ThreadPoolExecutor-0_6 | delfos.scripts.kafka_managerV2 | Successfully connected to Kafka broker at 'kafka:29092'
+2026-05-13 23:45:31 | INFO     | ThreadPoolExecutor-0_5 | delfos.scripts.kafka_managerV2 | Successfully connected to Kafka broker at 'kafka:29092'
+2026-05-13 23:45:31 | INFO     | ThreadPoolExecutor-0_11 | delfos.scripts.kafka_managerV2 | Successfully connected to Kafka broker at 'kafka:29092'
+2026-05-13 23:45:31 | INFO     | ThreadPoolExecutor-0_10 | delfos.scripts.kafka_managerV2 | Successfully connected to Kafka broker at 'kafka:29092'
+2026-05-13 23:45:31 | INFO     | ThreadPoolExecutor-0_0 | delfos.scripts.kafka_managerV2 | Successfully connected to Kafka broker at 'kafka:29092'
+2026-05-13 23:45:31 | INFO     | ThreadPoolExecutor-0_3 | delfos.scripts.kafka_managerV2 | Successfully connected to Kafka broker at 'kafka:29092'
+2026-05-13 23:45:31 | INFO     | ThreadPoolExecutor-0_8 | delfos.scripts.kafka_managerV2 | Successfully connected to Kafka broker at 'kafka:29092'
+2026-05-13 23:45:31 | INFO     | ThreadPoolExecutor-0_7 | delfos.scripts.kafka_managerV2 | Successfully connected to Kafka broker at 'kafka:29092'
+2026-05-13 23:45:31 | INFO     | ThreadPoolExecutor-0_17 | delfos.scripts.kafka_managerV2 | Successfully connected to Kafka broker at 'kafka:29092'
+2026-05-13 23:45:31 | INFO     | ThreadPoolExecutor-0_4 | delfos.scripts.kafka_managerV2 | Successfully connected to Kafka broker at 'kafka:29092'
+2026-05-13 23:46:11 | INFO     | MainThread | delfos.scripts.top_wallets_processor | Top wallets ingestion complete. Processed 2007 markets.
+2026-05-13 23:46:12 | INFO     | MainThread | delfos.scripts.top_wallets_processor | Unique wallets saved to 'unique_wallets_list.json'. Total: 3511
+2026-05-13 23:46:31 | INFO     | MainThread | delfos.scripts.wallet_analyzer | Wallet analysis complete. 1000/1000 processed.
+2026-05-13 23:46:31 | INFO     | MainThread | delfos.scripts.data_ingestion | Closing HTTP connections...
+2026-05-13 23:46:31 | INFO     | MainThread | delfos.scripts.data_ingestion | Flushing remaining Kafka messages...
+2026-05-13 23:46:31 | INFO     | MainThread | delfos.scripts.data_ingestion | === Pipeline shutdown complete. Total time: 1 min 59.47 sec ===
+2026-05-13 23:50:04 | INFO     | MainThread | delfos.scripts.wallet_current_positions | Fetching positions for 0 wallets (workers=20)
+2026-05-13 23:50:04 | INFO     | MainThread | delfos.scripts.wallet_current_positions | Positions pipeline complete. Success: 0 | Failed: 0
+2026-05-13 23:50:04 | INFO     | MainThread | delfos.scripts.kafka_managerV2 | Successfully connected to Kafka broker at 'kafka:29092'
+2026-05-13 23:52:33 | INFO     | MainThread | delfos.scripts.wallet_current_positions | Fetching positions for 0 wallets (workers=20)
+2026-05-13 23:52:33 | INFO     | MainThread | delfos.scripts.wallet_current_positions | Positions pipeline complete. Success: 0 | Failed: 0
+2026-05-13 23:52:33 | INFO     | MainThread | delfos.scripts.kafka_managerV2 | Successfully connected to Kafka broker at 'kafka:29092'
+2026-05-13 23:53:19 | INFO     | MainThread | delfos.scripts.wallet_current_positions | Fetching positions for 0 wallets (workers=20)
+2026-05-13 23:53:19 | INFO     | MainThread | delfos.scripts.wallet_current_positions | Positions pipeline complete. Success: 0 | Failed: 0
+2026-05-13 23:53:19 | INFO     | MainThread | delfos.scripts.kafka_managerV2 | Successfully connected to Kafka broker at 'kafka:29092'
+2026-05-13 23:56:10 | INFO     | MainThread | delfos.scripts.wallet_current_positions | Fetching positions for 0 wallets (workers=20)
+2026-05-13 23:56:10 | INFO     | MainThread | delfos.scripts.wallet_current_positions | Positions pipeline complete. Success: 0 | Failed: 0
+2026-05-13 23:56:10 | INFO     | MainThread | delfos.scripts.kafka_managerV2 | Successfully connected to Kafka broker at 'kafka:29092'
+2026-05-13 23:56:56 | INFO     | MainThread | delfos.scripts.wallet_analyzer | === Wallet Analyzer Pipeline ===
+2026-05-13 23:56:56 | INFO     | MainThread | delfos.scripts.wallet_analyzer | Fetching trading history for 938 wallets (workers=20)
+2026-05-13 23:56:56 | INFO     | ThreadPoolExecutor-0_0 | delfos.scripts.kafka_managerV2 | Successfully connected to Kafka broker at 'kafka:29092'
+2026-05-13 23:58:08 | ERROR    | ThreadPoolExecutor-0_6 | delfos.scripts.wallet_analyzer | Connection error fetching history for 0xe5f0ae9cc9aef77ae3c2a64c9e69caa3f335dc1d: HTTPSConnectionPool(host='data-api.polymarket.com', port=443): Read timed out.. Retrying in 1.04s...
+2026-05-13 23:58:14 | ERROR    | ThreadPoolExecutor-0_6 | delfos.scripts.wallet_analyzer | Connection error fetching history for 0xe5f0ae9cc9aef77ae3c2a64c9e69caa3f335dc1d: HTTPSConnectionPool(host='data-api.polymarket.com', port=443): Max retries exceeded with url: /closed-positions?user=0xe5f0ae9cc9aef77ae3c2a64c9e69caa3f335dc1d&limit=50&offset=0&sortBy=TIMESTAMP&sortDirection=DESC (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x70a3506ab830>: Failed to resolve 'data-api.polymarket.com' (Name or service not known: data-api.polymarket.com using 1 resolver(s))")). Retrying in 2.50s...
+2026-05-13 23:58:14 | ERROR    | ThreadPoolExecutor-0_17 | delfos.scripts.wallet_analyzer | Connection error fetching history for 0xb8b44e3cc9e0962982e3c8bf444b6a7411f51f6e: HTTPSConnectionPool(host='data-api.polymarket.com', port=443): Read timed out. (read timeout=10). Retrying in 1.56s...
+2026-05-13 23:58:15 | ERROR    | ThreadPoolExecutor-0_15 | delfos.scripts.wallet_analyzer | Connection error fetching history for 0x67041592a7806567d16d5b8c3d3d885d974eeb81: HTTPSConnectionPool(host='data-api.polymarket.com', port=443): Read timed out. (read timeout=10). Retrying in 1.17s...
+2026-05-13 23:58:15 | ERROR    | ThreadPoolExecutor-0_18 | delfos.scripts.wallet_analyzer | Connection error fetching history for 0x3573c1bc6a964abe582a0bfa5cc269abfae7f375: HTTPSConnectionPool(host='data-api.polymarket.com', port=443): Read timed out. (read timeout=10). Retrying in 1.00s...
+2026-05-13 23:58:15 | ERROR    | ThreadPoolExecutor-0_3 | delfos.scripts.wallet_analyzer | Connection error fetching history for 0x0ee43574468bbffe8b1cca1c5236ef712452276f: HTTPSConnectionPool(host='data-api.polymarket.com', port=443): Read timed out. (read timeout=10). Retrying in 1.80s...
+2026-05-13 23:58:15 | ERROR    | ThreadPoolExecutor-0_4 | delfos.scripts.wallet_analyzer | Connection error fetching history for 0xfcf949c3ce52daa64e4d6aeac44b02a215d0f6ea: HTTPSConnectionPool(host='data-api.polymarket.com', port=443): Read timed out. (read timeout=10). Retrying in 1.70s...
+2026-05-13 23:58:15 | ERROR    | ThreadPoolExecutor-0_13 | delfos.scripts.wallet_analyzer | Connection error fetching history for 0xfdf55395172a97739a347276a188bf085d6a2d80: HTTPSConnectionPool(host='data-api.polymarket.com', port=443): Read timed out. (read timeout=10). Retrying in 1.45s...
+2026-05-13 23:58:16 | ERROR    | ThreadPoolExecutor-0_2 | delfos.scripts.wallet_analyzer | Connection error fetching history for 0xea2f794a7f0ce05e4bbd357b3ccbb3bd2048a8ef: HTTPSConnectionPool(host='data-api.polymarket.com', port=443): Read timed out. (read timeout=10). Retrying in 1.44s...
+2026-05-13 23:58:16 | ERROR    | ThreadPoolExecutor-0_16 | delfos.scripts.wallet_analyzer | Connection error fetching history for 0x3c69336f4e2021dec67d06d90e7ac38337404622: HTTPSConnectionPool(host='data-api.polymarket.com', port=443): Read timed out. (read timeout=10). Retrying in 1.44s...
+2026-05-13 23:58:16 | ERROR    | ThreadPoolExecutor-0_1 | delfos.scripts.wallet_analyzer | Connection error fetching history for 0xd0229fa99565267cab769fca96ee00c7c6ac76b9: HTTPSConnectionPool(host='data-api.polymarket.com', port=443): Read timed out. (read timeout=10). Retrying in 1.01s...
+2026-05-13 23:58:16 | ERROR    | ThreadPoolExecutor-0_10 | delfos.scripts.wallet_analyzer | Connection error fetching history for 0xc72b7db4ba3cc69620933c00eb21dc5ad79e3756: HTTPSConnectionPool(host='data-api.polymarket.com', port=443): Read timed out. (read timeout=10). Retrying in 1.18s...
+2026-05-13 23:58:17 | ERROR    | ThreadPoolExecutor-0_9 | delfos.scripts.wallet_analyzer | Connection error fetching history for 0x18f9e600838500cda92ff988a5e79b80e7dca0f1: HTTPSConnectionPool(host='data-api.polymarket.com', port=443): Read timed out. (read timeout=10). Retrying in 1.82s...
+2026-05-13 23:58:36 | INFO     | MainThread | delfos.scripts.wallet_analyzer | Wallet analysis complete. 938/938 processed.

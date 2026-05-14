@@ -2,12 +2,12 @@ import time
 import threading
 import requests
 
-from logger import get_logger
-from markets import obtain_event_data
-from top_wallets_processor import run_top_wallets_ingestion
-from websocket_ingestor import run_websocket
-from kafka_managerV2 import get_producer
-from wallet_analyzer import run_wallet_analysis_pipeline
+from .logger import get_logger
+from .markets import obtain_event_data
+from .top_wallets_processor import run_top_wallets_ingestion
+from .websocket_ingestor import run_websocket
+from .kafka_managerV2 import get_producer
+from .wallet_analyzer import run_wallet_analysis_pipeline
 
 log = get_logger(__name__)
 

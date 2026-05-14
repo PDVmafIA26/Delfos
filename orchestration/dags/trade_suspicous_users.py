@@ -5,7 +5,7 @@ from scripts.wallet_current_positions import analyze_multiple_wallets_positions
 from scripts.kafka_managerV2 import get_producer
 from datetime import datetime
 
-@dag(start_date=datetime(2026, 5, 10), schedule_interval="*/5 * * * *", catchup=False) # Cada tres horas se ejecutaría 'wallet_analysis_dag'
+@dag(start_date=datetime(2026, 5, 10), schedule_interval="0 */6 * * *", catchup=False) # Cada tres horas se ejecutaría 'wallet_analysis_dag'
 def wallet_analysis_dag():
 
     @task

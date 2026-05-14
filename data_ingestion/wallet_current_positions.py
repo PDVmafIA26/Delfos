@@ -6,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from .logger import get_logger
 from .rate_limiter import RateLimiter
-from .kafka_manager import get_producer
+from .kafka_managerV2 import get_producer
 
 log = get_logger(__name__)
 
