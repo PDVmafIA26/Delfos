@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS mercados_master (
 );
 
 -- Índice para búsquedas por condition_id (FK desde outcome_tokens)
-CREATE UNIQUE INDEX IF NOT EXISTS uq_mercados_condition_id ON mercados_master(id, condition_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_mercados_condition_id ON mercados_master(condition_id);
 
 COMMENT ON TABLE mercados_master IS 'Cada fila es un mercado/pregunta binaria dentro de un evento.';
 
@@ -98,13 +98,15 @@ COMMENT ON TABLE usuarios IS 'Wallets de Polymarket. first_seen_at: primera vez 
 
 -- Top wallets por mercado
 CREATE TABLE IF NOT EXISTS top_wallets (
-    wallet_address TEXT         NOT NULL REFERENCES usuarios(wallet_address) ON DELETE CASCADE,
+    wallet_address TEXT,
     condition_id   TEXT         NOT NULL REFERENCES mercados_master(condition_id) ON DELETE CASCADE,
     asset_id       TEXT,
     amount         NUMERIC(20,4),
     recorded_at    TIMESTAMPTZ  DEFAULT NOW(),
     PRIMARY KEY (wallet_address, condition_id)
 );
+
+CREATE TABLE top_wallets_staging AS TABLE top_wallets WITH NO DATA;
 
 COMMENT ON TABLE top_wallets IS 'Posiciones grandes de wallets en mercados específicos.';
 

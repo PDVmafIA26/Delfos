@@ -162,7 +162,7 @@ def write_to_postgres(batch_df, batch_id):
             liquidity, volume, volume_24h, volume_1w, volume_1mo, volume_1yr, event_id
         )
         VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-        ON CONFLICT (id, condition_id) DO UPDATE SET
+        ON CONFLICT (condition_id) DO UPDATE SET
             volume = EXCLUDED.volume,
             liquidity = EXCLUDED.liquidity
     """, [

@@ -153,16 +153,6 @@ result = agg.withColumn(
 )
 
 # =========================================================
-# DEBUG
-# =========================================================
-
-debug = result.writeStream \
-    .format("console") \
-    .outputMode("update") \
-    .option("truncate", False) \
-    .start()
-
-# =========================================================
 # 8. UPSERT POSTGRES
 # =========================================================
 
@@ -230,33 +220,33 @@ def upsert_to_postgres(batch_df, batch_id):
 
         DO UPDATE SET
 
-            total_won = t.total_won + EXCLUDED.total_won,
+            total_won = EXCLUDED.total_won,
 
-            total_lost = t.total_lost + EXCLUDED.total_lost,
+            total_lost = EXCLUDED.total_lost,
 
-            net_pnl = t.net_pnl + EXCLUDED.net_pnl,
+            net_pnl = EXCLUDED.net_pnl,
 
-            total_position = t.total_position + EXCLUDED.total_position,
+            total_position = EXCLUDED.total_position,
 
             es_sospechoso = (
 
                 (
-                    (t.total_won + EXCLUDED.total_won)
+                    (EXCLUDED.total_won)
 
                     /
 
                     NULLIF(
-                        (t.total_position + EXCLUDED.total_position),
+                        (EXCLUDED.total_position),
                         0
                     )
 
                 ) >= 0.9
 
                 AND
-                (t.total_position + EXCLUDED.total_position) >= 1
+                (EXCLUDED.total_position) >= 1
 
                 AND
-                (t.total_won + EXCLUDED.total_won) >= 10000
+                (EXCLUDED.total_won) >= 10000
             )
 
     """)
