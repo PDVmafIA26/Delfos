@@ -339,3 +339,91 @@ INSERT INTO config (key, value) VALUES
 ON CONFLICT (key) DO NOTHING;
 
 COMMENT ON TABLE config IS 'Parámetros ajustables del sistema de detección.';
+
+-- Inserta o actualiza market_daily_stats usando last_trade_price
+
+CREATE OR REPLACE FUNCTION refresh_market_daily_stats()
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+BEGIN
+
+    INSERT INTO market_daily_stats (
+        asset_id,
+        calc_date,
+        avg_price_24h,
+        last_stable_price,
+        updated_at
+    )
+    SELECT
+        ltp.asset_id,
+        CURRENT_DATE,
+        
+        -- Media de precios últimas 24h
+        AVG(ltp.price)::NUMERIC(10,6) AS avg_price_24h,
+
+        -- Último precio registrado
+        (
+            SELECT ltp2.price
+            FROM last_trade_price ltp2
+            WHERE ltp2.asset_id = ltp.asset_id
+            ORDER BY ltp2.traded_at DESC
+            LIMIT 1
+        )::NUMERIC(10,6) AS last_stable_price,
+
+        NOW()
+
+    FROM last_trade_price ltp
+    WHERE ltp.traded_at >= NOW() - INTERVAL '24 hours'
+    GROUP BY ltp.asset_id
+
+    ON CONFLICT (asset_id, calc_date)
+    DO UPDATE SET
+        avg_price_24h     = EXCLUDED.avg_price_24h,
+        last_stable_price = EXCLUDED.last_stable_price,
+        updated_at        = NOW();
+
+END;
+$$;
+
+
+-- Inserta o actualiza user_stats_batch usando trade_sospechosos
+
+CREATE OR REPLACE FUNCTION refresh_user_stats_batch()
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+BEGIN
+
+    INSERT INTO user_stats_batch (
+        wallet_address,
+        historical_pnl_level,
+        avg_bet_size,
+        updated_at
+    )
+    SELECT
+        ts.wallet_address,
+
+        -- Clasificación según media de realized_pnl
+        CASE
+            WHEN AVG(ts.realized_pnl) >= 10000 THEN 'HIGH'
+            WHEN AVG(ts.realized_pnl) >= 1000 THEN 'MEDIUM'
+            ELSE 'LOW'
+        END AS historical_pnl_level,
+
+        AVG(ts.realized_pnl)::NUMERIC(20,4) AS avg_bet_size,
+
+        NOW()
+
+    FROM trade_sospechosos ts
+    WHERE ts.wallet_address IS NOT NULL
+    GROUP BY ts.wallet_address
+
+    ON CONFLICT (wallet_address)
+    DO UPDATE SET
+        historical_pnl_level = EXCLUDED.historical_pnl_level,
+        avg_bet_size         = EXCLUDED.avg_bet_size,
+        updated_at           = NOW();
+
+END;
+$$;
