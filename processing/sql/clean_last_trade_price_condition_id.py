@@ -4,9 +4,9 @@ import psycopg2
 def delete_last_trade_by_condition(condition_id):
     conn = psycopg2.connect(
         dbname="markets",
-        user="postgrs",
+        user="postgres",
         password="postgres",
-        host="localhost",
+        host="postgres",
         port="5432"
     )
     

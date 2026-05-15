@@ -1,17 +1,13 @@
-# Usamos una imagen ligera de Python
-FROM python:3.11-slim
+FROM postgres:15
 
-# Definimos el directorio de trabajo
-WORKDIR /app
+# Instalar Python y pip
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    && rm -rf /var/lib/apt/lists/*
 
-# Ponemos pymongo
-RUN pip install --no-cache-dir kafka-python pymongo
-
-# Copiamos los archivos de la carpeta scripts al contenedor
-COPY ./scripts/ /app/
-
-# Forzamos a Python a que no use buffer para ver los logs en tiempo real
-ENV PYTHONUNBUFFERED=1
-
-# Ejecutamos el script
-CMD ["python", "bridge.py"]
+# Instalar librerías Python
+RUN pip3 install --no-cache-dir --break-system-packages \
+    psycopg2-binary \
+    requests \
+    urllib3
